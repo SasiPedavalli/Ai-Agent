@@ -18,3 +18,5 @@ screenshots/
 .idea/
 .DS_Store
 Thumbs.db
+
+webapp/.env

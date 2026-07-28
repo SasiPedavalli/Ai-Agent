@@ -1,8 +1,7 @@
 ﻿from pathlib import Path
 
 from agent.config import load_job_preferences, load_settings
-
-
+from agent.database import initialize_database
 APP_NAME = "AI Job Application Agent"
 
 
@@ -13,6 +12,7 @@ def ensure_directories() -> None:
 
 def main() -> None:
     ensure_directories()
+    initialize_database()
 
     settings = load_settings()
     preferences = load_job_preferences()
@@ -28,3 +28,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+code .
+python app.py

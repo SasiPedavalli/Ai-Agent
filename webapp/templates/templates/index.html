@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resume Pipeline — Local</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0F1419; --surface: #17202C; --surface-2: #1E293A;
+    --border: #2C3A4E; --border-strong: #3D4F68;
+    --text: #E8ECF1; --text-dim: #8B97AA; --text-faint: #5A6678;
+    --accent: #3FD8C4; --accent-dim: #1E4A44;
+    --amber: #F2A65A; --amber-dim: #4A3620; --red: #E8746A;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; line-height:1.5; padding:32px 24px 64px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px; padding-bottom:20px; border-bottom:1px solid var(--border); }
+  .brand { display:flex; align-items:center; gap:12px; }
+  .brand-mark { width:34px; height:34px; border:1.5px solid var(--accent); border-radius:8px; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--accent); font-weight:500; }
+  h1 { font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:600; margin:0; letter-spacing:-0.01em; }
+  .tagline { color:var(--text-dim); font-size:13px; margin-top:2px; }
+  .stat { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-faint); text-align:right; }
+  .stat b { color:var(--text-dim); font-weight:500; }
+  .section-label { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-faint); margin:32px 0 12px; display:flex; align-items:center; gap:10px; }
+  .section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+  .section-label:first-of-type { margin-top: 0; }
+  .panel { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:18px 20px 20px; display:flex; flex-direction:column; }
+  .panel-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .panel-label { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-faint); }
+  .panel-sub { font-size:12px; color:var(--text-dim); margin-bottom:12px; }
+  input[type=text], textarea {
+    width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:8px;
+    color:var(--text); font-family:'Inter',sans-serif; font-size:13px; line-height:1.6; padding:10px 12px;
+  }
+  textarea { resize:vertical; min-height:220px; }
+  input[type=text]:focus, textarea:focus { outline:none; border-color:var(--border-strong); }
+  textarea::placeholder, input::placeholder { color:var(--text-faint); }
+  .search-row { display:grid; grid-template-columns: 2fr 1fr auto; gap:10px; align-items:center; }
+  @media (max-width: 700px) { .search-row { grid-template-columns: 1fr; } }
+  .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-top:14px; }
+  @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+  .controls { display:flex; align-items:center; gap:18px; margin-top:14px; flex-wrap:wrap; }
+  .toggle { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-dim); cursor:pointer; }
+  .toggle input { accent-color: var(--accent); width:15px; height:15px; }
+  button.primary { background:var(--accent); color:#072421; border:none; border-radius:8px; padding:11px 22px; font-family:'Inter',sans-serif; font-size:14px; font-weight:600; cursor:pointer; transition:opacity .15s; white-space:nowrap; }
+  button.primary:hover { opacity:.88; }
+  button.primary:disabled { opacity:.4; cursor:not-allowed; }
+  button.ghost { background:transparent; color:var(--text-dim); border:1px solid var(--border); border-radius:8px; padding:7px 14px; font-family:'Inter',sans-serif; font-size:12px; cursor:pointer; }
+  button.ghost:hover { border-color:var(--border-strong); color:var(--text); }
+  .job-card { background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:14px 16px; margin-top:10px; }
+  .job-card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+  .job-title { font-weight:600; font-size:14px; }
+  .job-meta { font-size:12px; color:var(--text-dim); margin-top:2px; }
+  .job-summary { font-size:13px; color:var(--text-dim); margin-top:8px; line-height:1.5; }
+  .job-kw { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .kw-tag { font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--accent); background:var(--accent-dim); border-radius:4px; padding:2px 7px; }
+  .job-link { font-size:11.5px; color:var(--text-faint); text-decoration:none; word-break:break-all; }
+  .job-badges { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
+  .badge { font-family:'JetBrains Mono',monospace; font-size:10px; padding:2px 7px; border-radius:4px; border:1px solid var(--border); color:var(--text-dim); }
+  .badge.mode { color:var(--accent); border-color:var(--accent-dim); }
+  .score-card { display:flex; align-items:center; gap:14px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; margin-bottom:12px; }
+  .score-num { font-family:'Space Grotesk',sans-serif; font-size:26px; font-weight:600; color:var(--accent); }
+  .score-body { font-size:12px; color:var(--text-dim); line-height:1.5; }
+  .dl-row { display:flex; gap:8px; flex-wrap:wrap; }
+  .output-body { background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:18px 20px; font-size:13px; line-height:1.7; white-space:pre-wrap; min-height:120px; color:var(--text); }
+  .output-body.empty { color:var(--text-faint); font-style:italic; }
+  .output-actions { display:flex; gap:10px; margin-top:12px; }
+  .error-box { background:rgba(232,116,106,.1); border:1px solid var(--red); color:var(--red); border-radius:8px; padding:12px 16px; font-size:13px; margin-top:16px; }
+  .filter-note { font-size:11.5px; color:var(--text-faint); margin-top:8px; }
+  .footnote { font-size:12px; color:var(--text-faint); margin-top:28px; border-top:1px solid var(--border); padding-top:16px; }
+  .empty-hint { font-size:13px; color:var(--text-faint); font-style:italic; padding:8px 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="brand-mark">RP</div>
+      <div>
+        <h1>Resume Pipeline — Local</h1>
+        <div class="tagline">Running on your laptop with your own API key — search, tailor, review, submit yourself</div>
+      </div>
+    </div>
+    <div class="stat">Sasi P · <b>Data Engineer</b></div>
+  </header>
+
+  <div class="section-label">1 · Find postings</div>
+  <div class="panel">
+    <div class="panel-sub">Searches across major job boards, company career pages, and JobRight AI.</div>
+    <div class="search-row">
+      <input type="text" id="searchQuery" list="roleSuggestions" placeholder="e.g. data engineer Snowflake Databricks healthcare" value="data engineer Snowflake Databricks Airflow">
+      <input type="text" id="searchLocation" list="locationSuggestions" placeholder="Location or 'remote'" value="remote or New York">
+      <button class="primary" id="searchBtn">Search →</button>
+    </div>
+    <datalist id="roleSuggestions">
+      <option value="data engineer"><option value="senior data engineer"><option value="cloud data engineer">
+      <option value="Snowflake data engineer"><option value="Databricks data engineer"><option value="data platform engineer">
+      <option value="ETL developer"><option value="analytics engineer"><option value="data engineer healthcare">
+      <option value="data engineer fintech">
+    </datalist>
+    <datalist id="locationSuggestions">
+      <option value="remote"><option value="remote (US)"><option value="New York, NY"><option value="Little Rock, AR">
+      <option value="Dallas, TX"><option value="Chicago, IL"><option value="Austin, TX"><option value="Atlanta, GA">
+    </datalist>
+    <div class="controls" style="margin-top:12px;">
+      <label class="toggle"><input type="checkbox" id="excludeClearance" checked> Skip clearance / citizenship / green card required</label>
+      <label class="toggle"><input type="checkbox" id="excludeNoSponsor" checked> Skip "no sponsorship" roles</label>
+    </div>
+    <div class="controls" style="margin-top:6px;">
+      <span class="panel-sub" style="margin:0;">Work mode:</span>
+      <label class="toggle"><input type="checkbox" id="modeRemote" checked> Remote</label>
+      <label class="toggle"><input type="checkbox" id="modeHybrid" checked> Hybrid</label>
+      <label class="toggle"><input type="checkbox" id="modeOnsite" checked> Onsite</label>
+    </div>
+    <div class="controls" style="margin-top:6px;">
+      <span class="panel-sub" style="margin:0;">Level:</span>
+      <label class="toggle"><input type="checkbox" id="levelEntry"> Entry</label>
+      <label class="toggle"><input type="checkbox" id="levelMid" checked> Mid</label>
+      <label class="toggle"><input type="checkbox" id="levelSenior" checked> Senior</label>
+      <label class="toggle"><input type="checkbox" id="levelLead"> Lead / Principal</label>
+    </div>
+    <div class="filter-note">Filters are applied by the search based on what each posting states — double check the original listing.</div>
+    <div id="searchResults"></div>
+  </div>
+
+  <div class="section-label">2 · Source resume</div>
+  <div class="panel">
+    <div class="panel-head"><span class="panel-label">Your real experience</span><button class="ghost" id="resetResume">reset to base</button></div>
+    <div class="panel-sub">Edit if anything's out of date. This is the only source of truth used for tailoring.</div>
+    <textarea id="resumeInput" spellcheck="false"></textarea>
+  </div>
+
+  <div class="section-label">3 · Target job</div>
+  <div class="panel">
+    <div class="panel-sub">Paste a job description, or click "Use this posting" on a search result above.</div>
+    <textarea id="jdInput" placeholder="Paste the job description here, or pick a result above..."></textarea>
+  </div>
+
+  <div class="controls">
+    <label class="toggle"><input type="checkbox" id="includeCerts" checked> Include Claude AI certifications when relevant</label>
+    <label class="toggle"><input type="checkbox" id="includeSummary" checked> Rewrite professional summary for this role</label>
+    <label class="toggle"><input type="checkbox" id="includeCoverLetter" checked> Also generate a cover letter</label>
+  </div>
+
+  <div style="margin-top:16px;"><button class="primary" id="generateBtn">Tailor resume + cover letter →</button></div>
+  <div id="errorBox"></div>
+
+  <div class="grid2">
+    <div class="panel">
+      <div class="panel-head"><span class="panel-label">Tailored resume</span></div>
+      <div id="scoreCard"></div>
+      <div class="output-body empty" id="resumeOutput">Run a search or paste a JD, then generate.</div>
+      <div class="output-actions dl-row" id="resumeOutputActions" style="display:none;">
+        <button class="ghost" id="copyResumeBtn">Copy</button>
+        <button class="ghost" id="downloadResumeTxtBtn">.txt</button>
+        <button class="ghost" id="downloadResumeDocBtn">.doc (Word)</button>
+        <button class="ghost" id="downloadResumePdfBtn">.pdf</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><span class="panel-label">Cover letter</span></div>
+      <div class="output-body empty" id="letterOutput">Generated alongside the resume if enabled above.</div>
+      <div class="output-actions dl-row" id="letterOutputActions" style="display:none;">
+        <button class="ghost" id="copyLetterBtn">Copy</button>
+        <button class="ghost" id="downloadLetterTxtBtn">.txt</button>
+        <button class="ghost" id="downloadLetterDocBtn">.doc (Word)</button>
+        <button class="ghost" id="downloadLetterPdfBtn">.pdf</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footnote">
+    Search results come from live web search and may be incomplete — verify against the original posting.
+    Resume/cover letter content is rewritten emphasis and phrasing based only on your source resume; nothing is invented.
+    You review and submit every application yourself.
+  </div>
+</div>
+
+<script>
+const BASE_RESUME = `SASI P — Data Engineer
+Little Rock, Arkansas | spsasi68@gmail.com | linkedin.com/in/sasi-p68
+
+PROFESSIONAL SUMMARY
+Data Engineer with 5+ years of experience delivering enterprise-grade data solutions across Azure, AWS, and GCP platforms. Specialized in integrating Workday (EIB, Studio, RaaS) and other enterprise systems into modern data architectures using ADF, Glue, and Snowflake. Proven track record in designing secure, high-performance ETL pipelines and orchestrating real-time data processing using Kafka and Spark Streaming. Adept at implementing data governance practices, access controls, and compliance standards for HR and financial data. Collaborative team player with strong experience building automated CI/CD pipelines and delivering analytics-ready data for BI teams using Power BI and Tableau.
+
+EXPERIENCE
+
+NYU Langone Health, New York, NY — Data Engineer | Jan 2025 – Present
+- Developed and maintained enterprise-grade data pipelines to ingest HR and financial data from Workday using custom RaaS APIs and EIB integrations, enabling daily data refreshes into Snowflake for analytics and compliance reporting.
+- Designed scalable batch and streaming workflows in Azure Data Factory integrated with Kafka topics to support high-throughput ingestion from clinical and administrative systems.
+- Engineered modular Python-based ETL scripts for data transformation, cleansing, and deduplication, ensuring 99.5% data accuracy in downstream reports used by HR and Finance departments.
+- Ensured compliance with enterprise-wide governance frameworks including HIPAA, GDPR, and FERPA, implementing fine-grained access controls and encryption for sensitive Workday HR data.
+- Migrated over 50TB of historical data from on-prem SQL Server to Azure Synapse Analytics using partitioning, indexing, and PolyBase external tables to boost query performance by over 55%.
+- Implemented row-level security and RBAC policies in Synapse to ensure compliance with HIPAA and internal governance standards, and enforced encryption at rest and in transit.
+- Built CI/CD pipelines with Azure DevOps and Jenkins for automated testing, deployment, and monitoring of ADF workflows, significantly reducing production release times.
+- Collaborated directly with business analysts and report developers to design integrated Power BI dashboards sourcing real-time and historical data from Synapse and Snowflake.
+- Set up pipeline observability using Azure Monitor, Log Analytics, and custom logging mechanisms to detect latency bottlenecks and proactively alert on SLA breaches.
+- Contributed to data protection strategy design by implementing standardized governance policies across ADF pipelines and Synapse datasets.
+Environment: Azure Data Factory, Synapse Analytics, Azure Data Lake, Databricks, Kafka, Workday (EIB, RaaS), Snowflake, Python, SQL Server, PostgreSQL, Oracle, MongoDB, DynamoDB, Bash, Linux/Unix, Jenkins, Azure DevOps, Tableau, Power BI, GitHub
+
+BlackRock, New York, NY — Data Engineer | Feb 2024 – Dec 2024
+- Built and maintained ETL pipelines to ingest HR and operations data from Workday using RaaS reports and REST APIs, integrating with financial datasets in Redshift and Snowflake for unified analytics.
+- Used Python and PySpark to develop data transformation logic handling nested XML and JSON structures from Workday and Salesforce, standardizing data for downstream use.
+- Transformed complex XML payloads using XSLT for downstream compatibility with data warehouse models and analytics tools.
+- Created parameterized Glue jobs and orchestrated them via Airflow to automate data loading workflows, improving reliability and reducing manual intervention.
+- Designed S3-based data lakes with structured zones (raw, clean, curated) to manage ingestion from Workday and internal systems with proper schema versioning.
+- Tuned Redshift queries and set up materialized views to support BI dashboards used by HR and compliance teams.
+- Collaborated with security teams to apply fine-grained IAM policies and encryption for Workday-sourced data, ensuring compliance with internal policies.
+- Supported audit readiness by maintaining metadata and data lineage for Workday and other data assets using AWS Glue Data Catalog and tagging policies.
+- Built secure, scalable iPaaS-style integrations using Glue and Airflow, supporting API-driven ingestion from Workday and internal HR systems.
+- Coordinated with business analysts to validate Workday HR KPIs such as headcount, compensation, and attrition, ensuring reporting accuracy across Tableau and Power BI dashboards.
+Environment: AWS (S3, Glue, Redshift, Lambda, IAM, CloudWatch), Apache Airflow, Workday (RaaS, REST API), Salesforce, PySpark, Python, XML, JSON, Tableau, Power BI, SQL, Git, Jenkins
+
+Lonza Group, Mumbai, India — Data Engineer | May 2020 – Nov 2022
+- Worked on Hadoop, SOLR, PySpark, Kafka, and Storm for Big Data integration and analytics.
+- Designed and maintained GCP-based solutions using Dataproc, BigQuery, and Google Cloud Dataflow, optimizing query performance and cost efficiency through Data Studio reports.
+- Optimized data pipeline workflows using Azure Databricks, leveraging Python, Scala, SQL, and Spark for data transformation and processing.
+- Developed Spark scripts, UDFs, and Spark-SQL queries for efficient data aggregation and querying in RDBMS via Sqoop.
+- Designed and implemented ETL workflows for ingesting raw data into Google Cloud Storage using Sqoop and Dataproc.
+- Extracted, transformed, and loaded large-scale datasets from various sources into Azure Data Storage Services via Azure Data Factory T-SQL for data lake analytics.
+- Monitored BigQuery, Dataproc, and Cloud Dataflow jobs via Stackdriver across multiple environments.
+- Migrated cron jobs to Airflow/Cloud Composer in GCP to automate scheduling, enhancing workflow efficiency and resource optimization.
+- Built interactive dashboard reports using Tableau, enabling stakeholders to extract insights from complex datasets.
+- Integrated real-time monitoring and analytics through BigQuery Cloud Dataflow, ensuring high data availability and accuracy.
+Environment: Airflow, Apache Beam, AWS, Azure, BigQuery, GCP, Kafka, Data Lake, PySpark, Python, RDBMS, Scala, Spark, Spark SQL, SQL, Sqoop, Storm, Tableau
+
+EDUCATION
+University of Arkansas at Little Rock — Master's Degree, Information Quality | Jan 2023 – Dec 2024
+
+CERTIFICATIONS
+AWS Certified Data Engineer – Associate
+Microsoft Certified: Azure Data Fundamentals
+
+TECHNICAL SKILLS
+Big Data Ecosystem: Hadoop MapReduce, Impala, HDFS, Hive, Pig, HBase, Flume, Storm, Sqoop, Oozie, Kafka, Spark
+Enterprise Integration: Workday (EIB, Studio, RaaS, REST API), Salesforce, SAP, RESTful Services, XML/JSON APIs, XSLT, iPaaS (Glue, ADF, Airflow)
+Programming Languages: Python, R, Scala, C++, SAS, Java, SQL, HiveQL, PL/SQL, UNIX shell scripting, Pig Latin
+Cloud: AWS, Azure, GCP
+Databases: Snowflake, MySQL, Teradata, Oracle, MS SQL Server, PostgreSQL, DB2
+NoSQL: HBase, Cassandra, MongoDB, DynamoDB, Cosmos DB
+Version Control: Git, SVN, Bitbucket
+CI/CD Containerization: Jenkins, Docker, Kubernetes
+ETL/BI: Informatica, SSIS, SSRS, SSAS, Tableau, Power BI, QlikView, Arcadia, Erwin, Matillion, Rivery
+Compliance and Governance: HIPAA, GDPR, FERPA, RBAC, IAM, Data Lineage, Data Protection Strategies
+Methodologies: RAD, JAD, UML, SDLC, Jira, Confluence, Agile, Waterfall, Asana`;
+
+const resumeInput = document.getElementById('resumeInput');
+resumeInput.value = BASE_RESUME;
+document.getElementById('resetResume').addEventListener('click', () => { resumeInput.value = BASE_RESUME; });
+
+const searchBtn = document.getElementById('searchBtn');
+const searchResults = document.getElementById('searchResults');
+const jdInput = document.getElementById('jdInput');
+
+searchBtn.addEventListener('click', async () => {
+  const query = document.getElementById('searchQuery').value.trim();
+  const location = document.getElementById('searchLocation').value.trim();
+  if (!query) return;
+
+  const modes = [
+    document.getElementById('modeRemote').checked && 'Remote',
+    document.getElementById('modeHybrid').checked && 'Hybrid',
+    document.getElementById('modeOnsite').checked && 'Onsite'
+  ].filter(Boolean);
+  const levels = [
+    document.getElementById('levelEntry').checked && 'Entry',
+    document.getElementById('levelMid').checked && 'Mid',
+    document.getElementById('levelSenior').checked && 'Senior',
+    document.getElementById('levelLead').checked && 'Lead/Principal'
+  ].filter(Boolean);
+  const filters = {
+    excludeClearance: document.getElementById('excludeClearance').checked,
+    excludeNoSponsor: document.getElementById('excludeNoSponsor').checked,
+    modes, levels
+  };
+
+  searchBtn.disabled = true; searchBtn.textContent = 'Searching...';
+  searchResults.innerHTML = '<div class="empty-hint">Searching current postings — usually 15-30 seconds...</div>';
+
+  try {
+    const res = await fetch('/api/search', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, location, filters })
+    });
+    const data = await res.json();
+    const jobs = data.jobs || [];
+
+    if (!jobs.length) {
+      searchResults.innerHTML = '<div class="empty-hint">No results — try a different query.</div>';
+    } else {
+      searchResults.innerHTML = '';
+      jobs.forEach(job => {
+        const card = document.createElement('div');
+        card.className = 'job-card';
+        card.innerHTML = `
+          <div class="job-card-top">
+            <div>
+              <div class="job-title">${job.title || 'Untitled role'}</div>
+              <div class="job-meta">${job.company || 'Unknown company'}</div>
+            </div>
+            <button class="ghost use-btn">Use this posting</button>
+          </div>
+          <div class="job-badges">
+            <span class="badge mode">${job.work_mode || 'Mode not specified'}</span>
+            <span class="badge">${job.level || 'Level not specified'}</span>
+            <span class="badge">${job.location || 'Location not specified'}</span>
+            <span class="badge">${job.posted || 'Date unknown'}</span>
+          </div>
+          <div class="job-summary">${job.summary || ''}</div>
+          <div class="job-kw">${(job.keywords || []).map(k => `<span class="kw-tag">${k}</span>`).join('')}</div>
+          ${job.url ? `<div style="margin-top:8px;"><a class="job-link" href="${job.url}" target="_blank" rel="noopener">${job.url}</a></div>` : ''}
+        `;
+        card.querySelector('.use-btn').addEventListener('click', () => {
+          jdInput.value = `${job.title || ''} — ${job.company || ''} (${job.location || ''})\n\n${job.jd_text || job.summary || ''}`;
+          jdInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+        searchResults.appendChild(card);
+      });
+    }
+  } catch (err) {
+    searchResults.innerHTML = `<div class="error-box">Search failed: ${err.message}.</div>`;
+  } finally {
+    searchBtn.disabled = false; searchBtn.textContent = 'Search →';
+  }
+});
+
+const generateBtn = document.getElementById('generateBtn');
+const resumeOutput = document.getElementById('resumeOutput');
+const letterOutput = document.getElementById('letterOutput');
+const resumeOutputActions = document.getElementById('resumeOutputActions');
+const letterOutputActions = document.getElementById('letterOutputActions');
+const errorBox = document.getElementById('errorBox');
+
+generateBtn.addEventListener('click', async () => {
+  const resume = resumeInput.value.trim();
+  const jd = jdInput.value.trim();
+  errorBox.innerHTML = '';
+  if (!jd) { errorBox.innerHTML = '<div class="error-box">Search for a role or paste a job description first.</div>'; return; }
+
+  generateBtn.disabled = true; generateBtn.textContent = 'Generating...';
+  resumeOutputActions.style.display = 'none'; letterOutputActions.style.display = 'none';
+  resumeOutput.classList.add('empty'); resumeOutput.textContent = 'Working...';
+  letterOutput.classList.add('empty'); letterOutput.textContent = 'Working...';
+  document.getElementById('scoreCard').innerHTML = '';
+
+  try {
+    const res = await fetch('/api/tailor', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        resume, jd,
+        includeCerts: document.getElementById('includeCerts').checked,
+        includeSummary: document.getElementById('includeSummary').checked,
+        includeCoverLetter: document.getElementById('includeCoverLetter').checked
+      })
+    });
+    const data = await res.json();
+
+    resumeOutput.classList.remove('empty');
+    resumeOutput.textContent = data.resume || 'No output returned — try again.';
+    if (data.resume) resumeOutputActions.style.display = 'flex';
+
+    if (data.score) {
+      document.getElementById('scoreCard').innerHTML = `
+        <div class="score-card">
+          <div class="score-num">${data.score.score}</div>
+          <div class="score-body"><b>ATS match score</b><br>${data.score.rationale}</div>
+        </div>`;
+    }
+
+    if (data.letter) {
+      letterOutput.classList.remove('empty');
+      letterOutput.textContent = data.letter;
+      letterOutputActions.style.display = 'flex';
+    } else {
+      letterOutput.classList.add('empty');
+      letterOutput.textContent = 'Cover letter generation was skipped.';
+    }
+  } catch (err) {
+    errorBox.innerHTML = `<div class="error-box">Something went wrong: ${err.message}.</div>`;
+  } finally {
+    generateBtn.disabled = false; generateBtn.textContent = 'Tailor resume + cover letter →';
+  }
+});
+
+function downloadBlob(content, type, filename) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+function downloadAsWord(text, filename) {
+  const htmlBody = text.split('\n').map(line => `<p style="margin:0 0 6pt 0; font-family:Calibri,sans-serif; font-size:11pt;">${line.replace(/&/g,'&amp;').replace(/</g,'&lt;') || '&nbsp;'}</p>`).join('');
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>Document</title></head><body>${htmlBody}</body></html>`;
+  downloadBlob(html, 'application/msword', filename);
+}
+function downloadAsPdf(text, filename) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  const margin = 48, maxWidth = 612 - margin * 2, lineHeight = 14;
+  doc.setFont('helvetica'); doc.setFontSize(10.5);
+  const lines = doc.splitTextToSize(text, maxWidth);
+  let y = margin;
+  lines.forEach(line => { if (y > 792 - margin) { doc.addPage(); y = margin; } doc.text(line, margin, y); y += lineHeight; });
+  doc.save(filename);
+}
+function wireCopyDownload(outputEl, copyBtnId, txtBtnId, docBtnId, pdfBtnId, baseName) {
+  document.getElementById(copyBtnId).addEventListener('click', () => {
+    navigator.clipboard.writeText(outputEl.textContent);
+    const btn = document.getElementById(copyBtnId); const original = btn.textContent;
+    btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = original; }, 1500);
+  });
+  document.getElementById(txtBtnId).addEventListener('click', () => downloadBlob(outputEl.textContent, 'text/plain', baseName + '.txt'));
+  document.getElementById(docBtnId).addEventListener('click', () => downloadAsWord(outputEl.textContent, baseName + '.doc'));
+  document.getElementById(pdfBtnId).addEventListener('click', () => downloadAsPdf(outputEl.textContent, baseName + '.pdf'));
+}
+wireCopyDownload(resumeOutput, 'copyResumeBtn', 'downloadResumeTxtBtn', 'downloadResumeDocBtn', 'downloadResumePdfBtn', 'Sasi_P_Resume_Tailored');
+wireCopyDownload(letterOutput, 'copyLetterBtn', 'downloadLetterTxtBtn', 'downloadLetterDocBtn', 'downloadLetterPdfBtn', 'Sasi_P_Cover_Letter');
+</script>
+</body>
+</html>
