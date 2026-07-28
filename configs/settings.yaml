@@ -1,0 +1,17 @@
+﻿app:
+  name: AI Job Application Agent
+  environment: development
+
+database:
+  url: sqlite:///data/jobs.db
+
+logging:
+  level: INFO
+
+ai:
+  provider: openai
+  model: gpt-5-mini
+
+automation:
+  stop_before_submit: true
+  save_screenshots: true

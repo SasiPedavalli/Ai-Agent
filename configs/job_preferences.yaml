@@ -1,0 +1,35 @@
+﻿preferred_roles:
+  - Senior Data Engineer
+  - Data Engineer
+  - Data Platform Engineer
+  - Analytics Engineer
+  - Cloud Data Engineer
+
+preferred_skills:
+  - Python
+  - SQL
+  - PySpark
+  - Databricks
+  - Snowflake
+  - dbt
+  - AWS
+  - Azure
+  - GCP
+  - ETL
+  - ELT
+  - Data Quality
+  - Observability
+  - CI/CD
+  - AI
+
+employment:
+  full_time_only: true
+  w2_only: true
+  remote_only: true
+
+exclude:
+  citizenship_required: true
+  active_clearance_required: true
+  green_card_only: true
+
+minimum_score: 75
