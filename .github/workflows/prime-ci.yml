@@ -26,8 +26,8 @@ jobs:
       run:
         working-directory: prime
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install PRIME
@@ -48,7 +48,7 @@ jobs:
             --state artifacts/ci-state/champion.json \
             --history artifacts/ci-state/history.jsonl \
             --json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: matrix.python-version == '3.11'
         with:
           name: prime-v02-ci-evidence
