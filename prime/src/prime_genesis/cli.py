@@ -1,6 +1,8 @@
 from __future__ import annotations
-import argparse,json
+import argparse,json,os
 from pathlib import Path
+from prime_genesis.auth import issue_token,verify_token
+from prime_genesis.backup import backup_sqlite
 from prime_genesis.canary import CanaryPolicy
 from prime_genesis.engine import evolve
 from prime_genesis.providers.mock import DeterministicProvider
@@ -26,6 +28,9 @@ def build_parser():
  p=s.add_parser('document-search');p.add_argument('--query',required=True);p.add_argument('--namespace');p.add_argument('--limit',type=int,default=5);_ca(p)
  p=s.add_parser('budget-set');p.add_argument('--limit-usd',type=float,required=True);_ca(p,'admin')
  p=s.add_parser('budget-status');_ca(p)
+ p=s.add_parser('token-issue');p.add_argument('--tenant',required=True);p.add_argument('--actor',required=True);p.add_argument('--roles',default='reader');p.add_argument('--ttl',type=int,default=3600)
+ p=s.add_parser('token-verify');p.add_argument('--token',required=True)
+ p=s.add_parser('backup');p.add_argument('--source',default='artifacts/runtime.db');p.add_argument('--destination',required=True)
  p=s.add_parser('serve');p.add_argument('--host',default='127.0.0.1');p.add_argument('--port',type=int,default=8080)
  return x
 def main():
@@ -33,6 +38,9 @@ def main():
  if a.command=='evolve':
   r=evolve(provider=_provider(a.provider,a.model),benchmark_path=a.benchmark,holdout_path=a.holdout,db_path=a.db,state_path=a.state,history_path=a.history,max_mutation_rounds=a.max_rounds,canary_policy=CanaryPolicy(traffic_fraction=a.canary_traffic));Path(a.json_report).parent.mkdir(parents=True,exist_ok=True);Path(a.json_report).write_text(json.dumps(r.to_dict(),indent=2)+'\n');print(r.selected_champion);return 0
  if a.command=='status':print(json.dumps(read_status(a.state,a.history),indent=2));return 0
+ if a.command=='token-issue':print(issue_token(os.getenv('PRIME_AUTH_SECRET',''),_ctx(a),ttl_seconds=a.ttl));return 0
+ if a.command=='token-verify':print(json.dumps(verify_token(os.getenv('PRIME_AUTH_SECRET',''),a.token).__dict__,indent=2));return 0
+ if a.command=='backup':print(json.dumps(backup_sqlite(a.source,a.destination).__dict__,indent=2));return 0
  if a.command=='serve':
   import uvicorn;uvicorn.run('prime_genesis.control_api:app',host=a.host,port=a.port);return 0
  rt=PrimeRuntime(a.runtime_db)

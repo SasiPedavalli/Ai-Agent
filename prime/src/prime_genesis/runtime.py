@@ -4,9 +4,11 @@ from pathlib import Path
 from typing import Any
 from prime_genesis.budget import BudgetExceededError,TenantBudgetStore
 from prime_genesis.feedback import FeedbackRecord,FeedbackStore
+from prime_genesis.idempotency import IdempotencyStore
 from prime_genesis.memory import MemoryRecord,TenantMemoryStore
 from prime_genesis.model_registry import ModelRegistry,default_model_registry
 from prime_genesis.observability import RuntimeEventStore
+from prime_genesis.rate_limit import RateLimiter
 from prime_genesis.retrieval import DocumentRecord,RetrievalHit,TenantDocumentStore
 from prime_genesis.router import ModelRouter,RouteRequest
 from prime_genesis.security import TenantContext
@@ -14,8 +16,8 @@ from prime_genesis.tools import ToolRegistry,default_tool_registry
 from prime_products import CompanyBrainAgent,DigitalTwinAgent,GenomeAgent,GuardianXAgent,ProductAgent,ProductRequest,ProductResult
 class PrimeRuntime:
  def __init__(self,path:str|Path='artifacts/runtime.db',*,router:ModelRouter|None=None,tools:ToolRegistry|None=None,models:ModelRegistry|None=None)->None:
-  self.path=Path(path);self.memory=TenantMemoryStore(self.path);self.documents=TenantDocumentStore(self.path);self.events=RuntimeEventStore(self.path);self.feedback=FeedbackStore(self.path);self.budgets=TenantBudgetStore(self.path);self.router=router or ModelRouter();self.tools=tools or default_tool_registry();self.models=models or default_model_registry();agents:tuple[ProductAgent,...]=(GuardianXAgent(),GenomeAgent(),CompanyBrainAgent(),DigitalTwinAgent());self.products={a.name:a for a in agents}
- def close(self)->None:self.memory.close();self.documents.close();self.events.close();self.feedback.close();self.budgets.close()
+  self.path=Path(path);self.memory=TenantMemoryStore(self.path);self.documents=TenantDocumentStore(self.path);self.events=RuntimeEventStore(self.path);self.feedback=FeedbackStore(self.path);self.budgets=TenantBudgetStore(self.path);self.rate_limits=RateLimiter(self.path);self.idempotency=IdempotencyStore(self.path);self.router=router or ModelRouter();self.tools=tools or default_tool_registry();self.models=models or default_model_registry();agents:tuple[ProductAgent,...]=(GuardianXAgent(),GenomeAgent(),CompanyBrainAgent(),DigitalTwinAgent());self.products={a.name:a for a in agents}
+ def close(self)->None:self.memory.close();self.documents.close();self.events.close();self.feedback.close();self.budgets.close();self.rate_limits.close();self.idempotency.close()
  def list_products(self)->list[dict[str,str]]:return [{'name':a.name,'description':a.description} for a in sorted(self.products.values(),key=lambda p:p.name)]
  def list_models(self)->list[dict[str,Any]]:return [m.to_dict() for m in self.models.list()]
  def ingest_memory(self,context:TenantContext,*,namespace:str,content:str,metadata:dict[str,Any]|None=None)->MemoryRecord:

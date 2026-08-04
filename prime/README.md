@@ -1,6 +1,6 @@
-# PRIME v0.4 — Governed Evolution + Tenant AI Platform
+# PRIME v0.5 — Deployable Governed AI Platform
 
-**PRIME — Progressive Recursive Intelligence & Mutation Engine** now combines cumulative governed evolution with a tenant-scoped product platform.
+**PRIME — Progressive Recursive Intelligence & Mutation Engine** combines cumulative governed evolution with a tenant-scoped AI product platform.
 
 Products:
 - **Guardian X** — reliability, security, data, AI, and cost intelligence
@@ -8,57 +8,60 @@ Products:
 - **Company Brain** — organizational memory, retrieval, and conflict detection
 - **Digital Twin** — assumption-explicit counterfactual scenarios
 
-## v0.4 platform capabilities
+## Platform capabilities
 
-- Persistent daily champion evolution with public, holdout, and canary gates
-- Tenant/actor context and reader/writer/admin enforcement
+- Daily champion evolution with public, holdout, canary, promotion, and rollback gates
+- Tenant/actor context and reader/writer/admin authorization
 - Tenant-isolated memory and document retrieval
-- Model registry with private, fast, balanced, and reasoning tiers
-- Tier failover and optional environment-configured model aliases
-- Tenant daily model budgets and usage ledger
-- Bounded tools, runtime events, feedback, CLI, REST API, and dashboard
-- Customer content, private holdouts, raw outputs, and runtime databases excluded from Git
+- Private, fast, balanced, and reasoning model tiers with controlled failover
+- Tenant model budgets and usage accounting
+- Signed tenant tokens, actor/operation rate limits, and idempotent product runs
+- Runtime events, feedback, bounded tools, CLI, REST API, and dashboard
+- Verifiable SQLite backups
+- Non-root container, persistent volume, health check, Compose deployment, and container CI
 
-## Run
+## Run from source
 
 ```bash
 cd prime
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -e .
+pip install -e '.[api]'
 python -m unittest discover -s tests -v
-
 prime evolve
 prime products
 prime models
+prime serve --host 127.0.0.1 --port 8080
 ```
 
-Product example:
+## Run with Docker
 
 ```bash
-prime run-product guardian-x --tenant acme --actor analyst --roles reader \
-  --text "Kafka consumer lag caused pipeline latency to breach the SLA." --json
+cd prime
+cp .env.example .env
+# Replace PRIME_AUTH_SECRET with at least 32 random characters.
+docker compose up --build
 ```
 
-Retrieval and budget examples:
+The container enables HMAC Bearer authentication, runs as a non-root user, persists data in `prime_data`, and exposes `/health`.
+
+Create a temporary tenant token:
 
 ```bash
-prime document-add --tenant acme --actor editor --roles writer \
-  --namespace architecture --title Runbook \
-  --content "The service listens on port 8080."
-
-prime document-search --tenant acme --actor analyst --roles reader \
-  --namespace architecture --query "service port"
-
-prime budget-set --tenant acme --actor admin --roles admin --limit-usd 10
+export PRIME_AUTH_SECRET='replace-with-at-least-32-random-characters'
+prime token-issue --tenant acme --actor admin --roles admin,reader,writer --ttl 3600
 ```
 
-Optional real-model aliases are configured with `PRIME_FAST_MODEL`, `PRIME_BALANCED_MODEL`, and `PRIME_REASONING_MODEL`. The built-in deterministic models keep the platform runnable without paid APIs. Pricing is never assumed; optional per-million-token cost environment variables drive estimates.
+Product calls accept `Idempotency-Key`. Rate limits are scoped by tenant, actor, and operation. Tenant budgets are checked before model execution.
 
-The HTTP API expects `X-Prime-Tenant`, `X-Prime-Actor`, and `X-Prime-Roles` from a trusted identity-aware gateway. PRIME does not authenticate these headers itself. API-triggered evolution remains disabled unless explicitly enabled.
+## Important production boundary
+
+HMAC tokens and SQLite make PRIME runnable as a single-node deployment. They are not the final enterprise architecture. Internet-facing deployments should use an identity-aware gateway with OIDC, encrypted managed PostgreSQL/pgvector or equivalent tenant storage, centralized secrets, TLS, backup retention, audit export, and external monitoring.
+
+No customer data, private holdouts, API keys, HMAC secrets, raw outputs, or runtime databases should be committed to Git.
 
 ## Safety
 
-Genome does not diagnose or confirm fraud. Guardian X does not remediate automatically. Company Brain does not silently change policy. Digital Twin does not guarantee outcomes. Arbitrary production source-code self-modification remains prohibited.
+Genome does not diagnose or confirm fraud. Guardian X does not remediate automatically. Company Brain does not silently change policy. Digital Twin does not guarantee outcomes. Arbitrary production source-code self-modification remains prohibited; code changes continue through reviewed pull requests.
 
-See `docs/ARCHITECTURE.md`, `docs/EVOLUTION_POLICY.md`, and `docs/PRODUCT_RUNTIME.md`.
+See `docs/ARCHITECTURE.md`, `docs/EVOLUTION_POLICY.md`, `docs/PRODUCT_RUNTIME.md`, and `docs/DEPLOYMENT.md`.
