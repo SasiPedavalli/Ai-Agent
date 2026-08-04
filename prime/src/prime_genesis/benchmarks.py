@@ -21,10 +21,11 @@ def load_cases(path: str | Path) -> list[BenchmarkCase]:
                         expected_terms=tuple(payload.get("expected_terms", [])),
                         forbidden_terms=tuple(payload.get("forbidden_terms", [])),
                         domain=payload.get("domain", "general"),
+                        tags=tuple(payload.get("tags", [])),
                     )
                 )
             except KeyError as exc:
                 raise ValueError(f"Missing field on line {line_number}: {exc}") from exc
     if not cases:
-        raise ValueError("Benchmark contains no cases")
+        raise ValueError(f"Benchmark contains no cases: {path}")
     return cases
