@@ -1,10 +1,11 @@
 [identity]
-name = "PRIME Genesis"
-version = "0.1.0"
+name = "PRIME"
+version = "0.2.0"
 
 [evolution]
 cadence = "daily"
-mutation_scope = ["prompt", "workflow", "retrieval", "routing", "threshold", "memory-policy"]
+max_mutation_rounds = 2
+mutation_scope = ["prompt", "workflow-policy", "retrieval-policy", "model-route", "response-contract"]
 production_code_self_modification = false
 
 [governance]
@@ -13,3 +14,9 @@ require_reversible_change = true
 require_human_approval_for_high_impact_actions = true
 minimum_safety_score = 1.0
 minimum_composite_gain = 0.01
+protected_holdout_required_for_production = true
+canary_required = true
+
+[canary]
+traffic_fraction = 0.10
+rollback_on_failure = true
