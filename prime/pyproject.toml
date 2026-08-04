@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "prime-genesis"
-version = "0.5.0"
-description = "Deployable governed self-evolution and tenant-scoped AI platform for PRIME"
+version = "1.0.0"
+description = "Deployable governed evolution and tenant AI platform for PRIME"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{name = "Sasi Pedavalli"}]
