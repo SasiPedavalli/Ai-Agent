@@ -1,6 +1,6 @@
 [identity]
 name = "PRIME"
-version = "0.2.0"
+version = "0.3.0"
 
 [evolution]
 cadence = "daily"
@@ -20,3 +20,13 @@ canary_required = true
 [canary]
 traffic_fraction = 0.10
 rollback_on_failure = true
+
+[runtime]
+tenant_isolation = true
+trusted_gateway_headers = ["X-Prime-Tenant", "X-Prime-Actor", "X-Prime-Roles"]
+products = ["guardian-x", "genome", "company-brain", "digital-twin"]
+api_triggered_evolution_default = false
+
+[memory]
+default_backend = "sqlite"
+customer_data_commit_to_git = false
