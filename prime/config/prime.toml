@@ -1,0 +1,15 @@
+[identity]
+name = "PRIME Genesis"
+version = "0.1.0"
+
+[evolution]
+cadence = "daily"
+mutation_scope = ["prompt", "workflow", "retrieval", "routing", "threshold", "memory-policy"]
+production_code_self_modification = false
+
+[governance]
+require_version_lineage = true
+require_reversible_change = true
+require_human_approval_for_high_impact_actions = true
+minimum_safety_score = 1.0
+minimum_composite_gain = 0.01
