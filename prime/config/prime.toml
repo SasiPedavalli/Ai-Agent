@@ -1,6 +1,6 @@
 [identity]
 name = "PRIME"
-version = "0.4.0"
+version = "0.5.0"
 
 [evolution]
 cadence = "daily"
@@ -23,7 +23,6 @@ rollback_on_failure = true
 
 [runtime]
 tenant_isolation = true
-trusted_gateway_headers = ["X-Prime-Tenant", "X-Prime-Actor", "X-Prime-Roles"]
 products = ["guardian-x", "genome", "company-brain", "digital-twin"]
 api_triggered_evolution_default = false
 
@@ -40,3 +39,20 @@ budget_enforcement = true
 tenant_scoped = true
 default_limit = 5
 backend = "sqlite-token-overlap"
+
+[authentication]
+default_mode = "local"
+container_mode = "hmac"
+minimum_hmac_secret_characters = 32
+maximum_token_ttl_seconds = 86400
+production_oidc_gateway_recommended = true
+
+[abuse_controls]
+rate_limit_per_actor_operation = true
+idempotency_for_product_runs = true
+
+[deployment]
+container_runs_as_non_root = true
+persistent_volume_required = true
+health_endpoint = "/health"
+backup_hash_algorithm = "sha256"
