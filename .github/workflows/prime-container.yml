@@ -1,0 +1,22 @@
+name: PRIME Container
+on:
+  pull_request:
+    paths:
+      - "prime/**"
+      - ".github/workflows/prime-container.yml"
+  push:
+    branches: [main]
+    paths:
+      - "prime/**"
+      - ".github/workflows/prime-container.yml"
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build PRIME container
+        run: docker build --file prime/Dockerfile --tag prime:${{ github.sha }} prime
+      - name: Inspect non-root user
+        run: docker run --rm --entrypoint sh prime:${{ github.sha }} -c 'test "$(id -u)" != "0"'
