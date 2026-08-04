@@ -1,59 +1,319 @@
 from __future__ import annotations
-import argparse,json,os
+
+import argparse
+import json
+import os
+from dataclasses import asdict
 from pathlib import Path
-from prime_genesis.auth import issue_token,verify_token
+
+from prime_genesis.audit import TenantAuditExporter
+from prime_genesis.auth import issue_token, verify_token
 from prime_genesis.backup import backup_sqlite
 from prime_genesis.canary import CanaryPolicy
 from prime_genesis.engine import evolve
+from prime_genesis.improvement import FeedbackProposalBuilder
+from prime_genesis.maintenance import RuntimeMaintenance
 from prime_genesis.providers.mock import DeterministicProvider
+from prime_genesis.readiness import evaluate_readiness
 from prime_genesis.runtime import PrimeRuntime
 from prime_genesis.security import TenantContext
 from prime_genesis.state import read_status
 from prime_products.base import ProductRequest
-def _provider(name,model):
- if name=='mock':return DeterministicProvider()
- from prime_genesis.providers.openai_responses import OpenAIResponsesProvider
- return OpenAIResponsesProvider(model=model)
-def _ctx(a):return TenantContext(a.tenant,a.actor,frozenset(r.strip() for r in a.roles.split(',') if r.strip()))
-def _ca(p,roles='reader'):p.add_argument('--tenant',required=True);p.add_argument('--actor',required=True);p.add_argument('--roles',default=roles);p.add_argument('--runtime-db',default='artifacts/runtime.db')
-def build_parser():
- x=argparse.ArgumentParser(prog='prime');s=x.add_subparsers(dest='command',required=True)
- p=s.add_parser('evolve');p.add_argument('--provider',choices=('mock','openai'),default='mock');p.add_argument('--model');p.add_argument('--benchmark',default='data/benchmarks.jsonl');p.add_argument('--holdout',default='data/holdout.calibration.jsonl');p.add_argument('--db',default='artifacts/prime.db');p.add_argument('--state',default='state/champion.json');p.add_argument('--history',default='state/evolution-history.jsonl');p.add_argument('--json-report',default='artifacts/latest-report.json');p.add_argument('--max-rounds',type=int,default=2);p.add_argument('--canary-traffic',type=float,default=.1)
- p=s.add_parser('status');p.add_argument('--state',default='state/champion.json');p.add_argument('--history',default='state/evolution-history.jsonl');p.add_argument('--json',action='store_true')
- for name in ('products','models'):p=s.add_parser(name);p.add_argument('--runtime-db',default='artifacts/runtime.db')
- p=s.add_parser('run-product');p.add_argument('product',choices=('guardian-x','genome','company-brain','digital-twin'));p.add_argument('--text',required=True);p.add_argument('--namespace',default='default');p.add_argument('--sensitivity',default='standard');p.add_argument('--max-cost-usd',type=float);p.add_argument('--latency-target-ms',type=int);p.add_argument('--json',action='store_true');_ca(p)
- p=s.add_parser('memory-add');p.add_argument('--namespace',default='default');p.add_argument('--content',required=True);_ca(p,'writer')
- p=s.add_parser('memory-search');p.add_argument('--query',required=True);p.add_argument('--namespace');p.add_argument('--limit',type=int,default=10);_ca(p)
- p=s.add_parser('document-add');p.add_argument('--namespace',default='default');p.add_argument('--title',required=True);p.add_argument('--content',required=True);_ca(p,'writer')
- p=s.add_parser('document-search');p.add_argument('--query',required=True);p.add_argument('--namespace');p.add_argument('--limit',type=int,default=5);_ca(p)
- p=s.add_parser('budget-set');p.add_argument('--limit-usd',type=float,required=True);_ca(p,'admin')
- p=s.add_parser('budget-status');_ca(p)
- p=s.add_parser('token-issue');p.add_argument('--tenant',required=True);p.add_argument('--actor',required=True);p.add_argument('--roles',default='reader');p.add_argument('--ttl',type=int,default=3600)
- p=s.add_parser('token-verify');p.add_argument('--token',required=True)
- p=s.add_parser('backup');p.add_argument('--source',default='artifacts/runtime.db');p.add_argument('--destination',required=True)
- p=s.add_parser('serve');p.add_argument('--host',default='127.0.0.1');p.add_argument('--port',type=int,default=8080)
- return x
-def main():
- a=build_parser().parse_args()
- if a.command=='evolve':
-  r=evolve(provider=_provider(a.provider,a.model),benchmark_path=a.benchmark,holdout_path=a.holdout,db_path=a.db,state_path=a.state,history_path=a.history,max_mutation_rounds=a.max_rounds,canary_policy=CanaryPolicy(traffic_fraction=a.canary_traffic));Path(a.json_report).parent.mkdir(parents=True,exist_ok=True);Path(a.json_report).write_text(json.dumps(r.to_dict(),indent=2)+'\n');print(r.selected_champion);return 0
- if a.command=='status':print(json.dumps(read_status(a.state,a.history),indent=2));return 0
- if a.command=='token-issue':print(issue_token(os.getenv('PRIME_AUTH_SECRET',''),_ctx(a),ttl_seconds=a.ttl));return 0
- if a.command=='token-verify':print(json.dumps(verify_token(os.getenv('PRIME_AUTH_SECRET',''),a.token).__dict__,indent=2));return 0
- if a.command=='backup':print(json.dumps(backup_sqlite(a.source,a.destination).__dict__,indent=2));return 0
- if a.command=='serve':
-  import uvicorn;uvicorn.run('prime_genesis.control_api:app',host=a.host,port=a.port);return 0
- rt=PrimeRuntime(a.runtime_db)
- try:
-  if a.command=='products':print(json.dumps(rt.list_products(),indent=2))
-  elif a.command=='models':print(json.dumps(rt.list_models(),indent=2))
-  elif a.command=='run-product':print(json.dumps(rt.run_product(a.product,_ctx(a),ProductRequest(a.text,a.sensitivity,a.namespace,a.max_cost_usd,a.latency_target_ms)).to_dict(),indent=2))
-  elif a.command=='memory-add':print(json.dumps(rt.ingest_memory(_ctx(a),namespace=a.namespace,content=a.content).__dict__,indent=2))
-  elif a.command=='memory-search':print(json.dumps([r.__dict__ for r in rt.search_memory(_ctx(a),query=a.query,namespace=a.namespace,limit=a.limit)],indent=2))
-  elif a.command=='document-add':print(json.dumps(rt.ingest_document(_ctx(a),namespace=a.namespace,title=a.title,content=a.content).__dict__,indent=2))
-  elif a.command=='document-search':print(json.dumps([{'document':h.document.__dict__,'score':h.score,'matched_terms':h.matched_terms} for h in rt.search_documents(_ctx(a),query=a.query,namespace=a.namespace,limit=a.limit)],indent=2))
-  elif a.command=='budget-set':rt.budgets.set_daily_limit(_ctx(a),a.limit_usd);print(json.dumps(rt.budgets.authorize(_ctx(a),0).__dict__,indent=2))
-  elif a.command=='budget-status':print(json.dumps(rt.budgets.authorize(_ctx(a),0).__dict__,indent=2))
-  return 0
- finally:rt.close()
-if __name__=='__main__':raise SystemExit(main())
+
+
+def _provider(name: str, model: str | None):
+    if name == "mock":
+        return DeterministicProvider()
+    from prime_genesis.providers.openai_responses import OpenAIResponsesProvider
+
+    return OpenAIResponsesProvider(model=model)
+
+
+def _context(args: argparse.Namespace) -> TenantContext:
+    return TenantContext(
+        args.tenant,
+        args.actor,
+        frozenset(role.strip() for role in args.roles.split(",") if role.strip()),
+    )
+
+
+def _context_arguments(parser: argparse.ArgumentParser, roles: str = "reader") -> None:
+    parser.add_argument("--tenant", required=True)
+    parser.add_argument("--actor", required=True)
+    parser.add_argument("--roles", default=roles)
+    parser.add_argument("--runtime-db", default="artifacts/runtime.db")
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="prime", description="PRIME 1.0 control plane")
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    command = commands.add_parser("evolve")
+    command.add_argument("--provider", choices=("mock", "openai"), default="mock")
+    command.add_argument("--model")
+    command.add_argument("--benchmark", default="data/benchmarks.jsonl")
+    command.add_argument("--holdout", default="data/holdout.calibration.jsonl")
+    command.add_argument("--db", default="artifacts/prime.db")
+    command.add_argument("--state", default="state/champion.json")
+    command.add_argument("--history", default="state/evolution-history.jsonl")
+    command.add_argument("--json-report", default="artifacts/latest-report.json")
+    command.add_argument("--max-rounds", type=int, default=2)
+    command.add_argument("--canary-traffic", type=float, default=0.1)
+
+    command = commands.add_parser("status")
+    command.add_argument("--state", default="state/champion.json")
+    command.add_argument("--history", default="state/evolution-history.jsonl")
+
+    command = commands.add_parser("ready")
+    command.add_argument("--state", default="state/champion.json")
+    command.add_argument("--runtime-db", default="artifacts/runtime.db")
+
+    for name in ("products", "models"):
+        command = commands.add_parser(name)
+        command.add_argument("--runtime-db", default="artifacts/runtime.db")
+
+    command = commands.add_parser("run-product")
+    command.add_argument(
+        "product", choices=("guardian-x", "genome", "company-brain", "digital-twin")
+    )
+    command.add_argument("--text", required=True)
+    command.add_argument("--namespace", default="default")
+    command.add_argument("--sensitivity", default="standard")
+    command.add_argument("--max-cost-usd", type=float)
+    command.add_argument("--latency-target-ms", type=int)
+    _context_arguments(command)
+
+    command = commands.add_parser("memory-add")
+    command.add_argument("--namespace", default="default")
+    command.add_argument("--content", required=True)
+    _context_arguments(command, "writer")
+
+    command = commands.add_parser("memory-search")
+    command.add_argument("--query", required=True)
+    command.add_argument("--namespace")
+    command.add_argument("--limit", type=int, default=10)
+    _context_arguments(command)
+
+    command = commands.add_parser("document-add")
+    command.add_argument("--namespace", default="default")
+    command.add_argument("--title", required=True)
+    command.add_argument("--content", required=True)
+    _context_arguments(command, "writer")
+
+    command = commands.add_parser("document-search")
+    command.add_argument("--query", required=True)
+    command.add_argument("--namespace")
+    command.add_argument("--limit", type=int, default=5)
+    _context_arguments(command)
+
+    command = commands.add_parser("budget-set")
+    command.add_argument("--limit-usd", type=float, required=True)
+    _context_arguments(command, "admin")
+
+    command = commands.add_parser("budget-status")
+    _context_arguments(command)
+
+    command = commands.add_parser("audit-export")
+    command.add_argument("--destination", required=True)
+    _context_arguments(command, "auditor")
+
+    command = commands.add_parser("evaluation-proposals")
+    command.add_argument("--maximum-rating", type=int, default=2)
+    command.add_argument("--destination")
+    _context_arguments(command, "evaluator")
+
+    command = commands.add_parser("maintenance")
+    command.add_argument("--runtime-event-days", type=int, default=30)
+    command.add_argument("--feedback-days", type=int, default=365)
+    _context_arguments(command, "admin")
+
+    command = commands.add_parser("token-issue")
+    command.add_argument("--tenant", required=True)
+    command.add_argument("--actor", required=True)
+    command.add_argument("--roles", default="reader")
+    command.add_argument("--ttl", type=int, default=3600)
+
+    command = commands.add_parser("token-verify")
+    command.add_argument("--token", required=True)
+
+    command = commands.add_parser("backup")
+    command.add_argument("--source", default="artifacts/runtime.db")
+    command.add_argument("--destination", required=True)
+
+    command = commands.add_parser("serve")
+    command.add_argument("--host", default="127.0.0.1")
+    command.add_argument("--port", type=int, default=8080)
+    return parser
+
+
+def _print(payload) -> None:
+    print(json.dumps(payload, indent=2, default=str))
+
+
+def main() -> int:
+    args = build_parser().parse_args()
+    if args.command == "evolve":
+        report = evolve(
+            provider=_provider(args.provider, args.model),
+            benchmark_path=args.benchmark,
+            holdout_path=args.holdout,
+            db_path=args.db,
+            state_path=args.state,
+            history_path=args.history,
+            max_mutation_rounds=args.max_rounds,
+            canary_policy=CanaryPolicy(traffic_fraction=args.canary_traffic),
+        )
+        path = Path(args.json_report)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(report.to_dict(), indent=2) + "\n", encoding="utf-8")
+        _print(report.to_dict())
+        return 0
+    if args.command == "status":
+        _print(read_status(args.state, args.history))
+        return 0
+    if args.command == "ready":
+        report = evaluate_readiness(
+            state_path=args.state,
+            runtime_db_path=args.runtime_db,
+        )
+        _print(report.to_dict())
+        return 0 if report.ready else 1
+    if args.command == "token-issue":
+        print(
+            issue_token(
+                os.getenv("PRIME_AUTH_SECRET", ""),
+                _context(args),
+                ttl_seconds=args.ttl,
+            )
+        )
+        return 0
+    if args.command == "token-verify":
+        _print(asdict(verify_token(os.getenv("PRIME_AUTH_SECRET", ""), args.token)))
+        return 0
+    if args.command == "backup":
+        _print(asdict(backup_sqlite(args.source, args.destination)))
+        return 0
+    if args.command == "audit-export":
+        exporter = TenantAuditExporter(args.runtime_db)
+        try:
+            _print(asdict(exporter.export(_context(args), destination=args.destination)))
+        finally:
+            exporter.close()
+        return 0
+    if args.command == "evaluation-proposals":
+        builder = FeedbackProposalBuilder(args.runtime_db)
+        try:
+            _print(
+                [
+                    asdict(item)
+                    for item in builder.build(
+                        _context(args),
+                        maximum_rating=args.maximum_rating,
+                        destination=args.destination,
+                    )
+                ]
+            )
+        finally:
+            builder.close()
+        return 0
+    if args.command == "maintenance":
+        manager = RuntimeMaintenance(args.runtime_db)
+        try:
+            _print(
+                asdict(
+                    manager.purge(
+                        runtime_event_days=args.runtime_event_days,
+                        feedback_days=args.feedback_days,
+                    )
+                )
+            )
+        finally:
+            manager.close()
+        return 0
+    if args.command == "serve":
+        import uvicorn
+
+        uvicorn.run("prime_genesis.control_api:app", host=args.host, port=args.port)
+        return 0
+
+    runtime = PrimeRuntime(args.runtime_db)
+    try:
+        if args.command == "products":
+            _print(runtime.list_products())
+        elif args.command == "models":
+            _print(runtime.list_models())
+        elif args.command == "run-product":
+            _print(
+                runtime.run_product(
+                    args.product,
+                    _context(args),
+                    ProductRequest(
+                        args.text,
+                        args.sensitivity,
+                        args.namespace,
+                        args.max_cost_usd,
+                        args.latency_target_ms,
+                    ),
+                ).to_dict()
+            )
+        elif args.command == "memory-add":
+            _print(
+                asdict(
+                    runtime.ingest_memory(
+                        _context(args),
+                        namespace=args.namespace,
+                        content=args.content,
+                    )
+                )
+            )
+        elif args.command == "memory-search":
+            _print(
+                [
+                    asdict(item)
+                    for item in runtime.search_memory(
+                        _context(args),
+                        query=args.query,
+                        namespace=args.namespace,
+                        limit=args.limit,
+                    )
+                ]
+            )
+        elif args.command == "document-add":
+            _print(
+                asdict(
+                    runtime.ingest_document(
+                        _context(args),
+                        namespace=args.namespace,
+                        title=args.title,
+                        content=args.content,
+                    )
+                )
+            )
+        elif args.command == "document-search":
+            _print(
+                [
+                    {
+                        "document": asdict(hit.document),
+                        "score": hit.score,
+                        "matched_terms": hit.matched_terms,
+                    }
+                    for hit in runtime.search_documents(
+                        _context(args),
+                        query=args.query,
+                        namespace=args.namespace,
+                        limit=args.limit,
+                    )
+                ]
+            )
+        elif args.command == "budget-set":
+            runtime.budgets.set_daily_limit(_context(args), args.limit_usd)
+            _print(asdict(runtime.budgets.authorize(_context(args), 0)))
+        elif args.command == "budget-status":
+            _print(asdict(runtime.budgets.authorize(_context(args), 0)))
+        return 0
+    finally:
+        runtime.close()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
