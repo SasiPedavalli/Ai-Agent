@@ -1,9 +1,6 @@
 from __future__ import annotations
-
-import argparse
-import json
+import argparse,json
 from pathlib import Path
-
 from prime_genesis.canary import CanaryPolicy
 from prime_genesis.engine import evolve
 from prime_genesis.providers.mock import DeterministicProvider
@@ -11,69 +8,44 @@ from prime_genesis.runtime import PrimeRuntime
 from prime_genesis.security import TenantContext
 from prime_genesis.state import read_status
 from prime_products.base import ProductRequest
-
-
-def _provider(name: str, model: str | None):
-    if name == "mock": return DeterministicProvider()
-    if name == "openai":
-        from prime_genesis.providers.openai_responses import OpenAIResponsesProvider
-        return OpenAIResponsesProvider(model=model)
-    raise ValueError(f"Unsupported provider: {name}")
-
-def _context(args: argparse.Namespace) -> TenantContext:
-    return TenantContext(args.tenant,args.actor,frozenset(r.strip() for r in args.roles.split(',') if r.strip()))
-def _context_args(parser: argparse.ArgumentParser,roles: str="reader") -> None:
-    parser.add_argument('--tenant',required=True); parser.add_argument('--actor',required=True); parser.add_argument('--roles',default=roles); parser.add_argument('--runtime-db',default='artifacts/runtime.db')
-
-def build_parser() -> argparse.ArgumentParser:
-    parser=argparse.ArgumentParser(prog='prime',description='PRIME evolution and product control plane'); subs=parser.add_subparsers(dest='command',required=True)
-    p=subs.add_parser('evolve'); p.add_argument('--provider',choices=('mock','openai'),default='mock'); p.add_argument('--model'); p.add_argument('--benchmark',default='data/benchmarks.jsonl'); p.add_argument('--holdout',default='data/holdout.calibration.jsonl'); p.add_argument('--db',default='artifacts/prime.db'); p.add_argument('--state',default='state/champion.json'); p.add_argument('--history',default='state/evolution-history.jsonl'); p.add_argument('--json-report',default='artifacts/latest-report.json'); p.add_argument('--max-rounds',type=int,default=2); p.add_argument('--canary-traffic',type=float,default=.10)
-    p=subs.add_parser('status'); p.add_argument('--state',default='state/champion.json'); p.add_argument('--history',default='state/evolution-history.jsonl'); p.add_argument('--json',action='store_true')
-    p=subs.add_parser('products'); p.add_argument('--runtime-db',default='artifacts/runtime.db')
-    p=subs.add_parser('run-product'); p.add_argument('product',choices=('guardian-x','genome','company-brain','digital-twin')); p.add_argument('--text',required=True); p.add_argument('--namespace',default='default'); p.add_argument('--sensitivity',default='standard'); p.add_argument('--max-cost-usd',type=float); p.add_argument('--latency-target-ms',type=int); p.add_argument('--json',action='store_true'); _context_args(p)
-    p=subs.add_parser('memory-add'); p.add_argument('--namespace',default='default'); p.add_argument('--content',required=True); _context_args(p,'writer')
-    p=subs.add_parser('memory-search'); p.add_argument('--query',required=True); p.add_argument('--namespace'); p.add_argument('--limit',type=int,default=10); _context_args(p)
-    p=subs.add_parser('serve'); p.add_argument('--host',default='127.0.0.1'); p.add_argument('--port',type=int,default=8080)
-    return parser
-
-def _write(path:str|Path,payload:dict)->Path:
-    out=Path(path); out.parent.mkdir(parents=True,exist_ok=True); out.write_text(json.dumps(payload,indent=2)+'\n',encoding='utf-8'); return out
-
-def main()->int:
-    args=build_parser().parse_args()
-    if args.command=='evolve':
-        report=evolve(provider=_provider(args.provider,args.model),benchmark_path=args.benchmark,holdout_path=args.holdout,db_path=args.db,state_path=args.state,history_path=args.history,max_mutation_rounds=args.max_rounds,canary_policy=CanaryPolicy(traffic_fraction=args.canary_traffic)); out=_write(args.json_report,report.to_dict()); print(f"Run: {report.run_id}\nSelected champion: {report.selected_champion}\nPromoted: {report.promoted}\nReport: {out}"); return 0
-    if args.command=='status':
-        status=read_status(args.state,args.history)
-        if args.json: print(json.dumps(status,indent=2))
-        elif not status['initialized']: print('PRIME has not completed an evolution run yet.')
-        else: print(f"Champion: {status['champion']['version_id']}\nGeneration: {status['champion']['generation']}\nHistory entries: {status['history_count']}")
-        return 0
-    if args.command=='products':
-        runtime=PrimeRuntime(args.runtime_db)
-        try: print(json.dumps(runtime.list_products(),indent=2))
-        finally: runtime.close()
-        return 0
-    if args.command=='run-product':
-        runtime=PrimeRuntime(args.runtime_db)
-        try:
-            result=runtime.run_product(args.product,_context(args),ProductRequest(args.text,args.sensitivity,args.namespace,args.max_cost_usd,args.latency_target_ms))
-            print(json.dumps(result.to_dict(),indent=2) if args.json else result.summary+'\n'+'\n'.join(f'- {x}' for x in result.findings))
-        finally: runtime.close()
-        return 0
-    if args.command=='memory-add':
-        runtime=PrimeRuntime(args.runtime_db)
-        try: print(json.dumps(runtime.ingest_memory(_context(args),namespace=args.namespace,content=args.content).__dict__,indent=2))
-        finally: runtime.close()
-        return 0
-    if args.command=='memory-search':
-        runtime=PrimeRuntime(args.runtime_db)
-        try: print(json.dumps([r.__dict__ for r in runtime.search_memory(_context(args),query=args.query,namespace=args.namespace,limit=args.limit)],indent=2))
-        finally: runtime.close()
-        return 0
-    if args.command=='serve':
-        try: import uvicorn
-        except ImportError as exc: raise RuntimeError("Install the API extra: pip install -e '.[api]'") from exc
-        uvicorn.run('prime_genesis.control_api:app',host=args.host,port=args.port,reload=False); return 0
-    return 1
-if __name__=='__main__': raise SystemExit(main())
+def _provider(name,model):
+ if name=='mock':return DeterministicProvider()
+ from prime_genesis.providers.openai_responses import OpenAIResponsesProvider
+ return OpenAIResponsesProvider(model=model)
+def _ctx(a):return TenantContext(a.tenant,a.actor,frozenset(r.strip() for r in a.roles.split(',') if r.strip()))
+def _ca(p,roles='reader'):p.add_argument('--tenant',required=True);p.add_argument('--actor',required=True);p.add_argument('--roles',default=roles);p.add_argument('--runtime-db',default='artifacts/runtime.db')
+def build_parser():
+ x=argparse.ArgumentParser(prog='prime');s=x.add_subparsers(dest='command',required=True)
+ p=s.add_parser('evolve');p.add_argument('--provider',choices=('mock','openai'),default='mock');p.add_argument('--model');p.add_argument('--benchmark',default='data/benchmarks.jsonl');p.add_argument('--holdout',default='data/holdout.calibration.jsonl');p.add_argument('--db',default='artifacts/prime.db');p.add_argument('--state',default='state/champion.json');p.add_argument('--history',default='state/evolution-history.jsonl');p.add_argument('--json-report',default='artifacts/latest-report.json');p.add_argument('--max-rounds',type=int,default=2);p.add_argument('--canary-traffic',type=float,default=.1)
+ p=s.add_parser('status');p.add_argument('--state',default='state/champion.json');p.add_argument('--history',default='state/evolution-history.jsonl');p.add_argument('--json',action='store_true')
+ for name in ('products','models'):p=s.add_parser(name);p.add_argument('--runtime-db',default='artifacts/runtime.db')
+ p=s.add_parser('run-product');p.add_argument('product',choices=('guardian-x','genome','company-brain','digital-twin'));p.add_argument('--text',required=True);p.add_argument('--namespace',default='default');p.add_argument('--sensitivity',default='standard');p.add_argument('--max-cost-usd',type=float);p.add_argument('--latency-target-ms',type=int);p.add_argument('--json',action='store_true');_ca(p)
+ p=s.add_parser('memory-add');p.add_argument('--namespace',default='default');p.add_argument('--content',required=True);_ca(p,'writer')
+ p=s.add_parser('memory-search');p.add_argument('--query',required=True);p.add_argument('--namespace');p.add_argument('--limit',type=int,default=10);_ca(p)
+ p=s.add_parser('document-add');p.add_argument('--namespace',default='default');p.add_argument('--title',required=True);p.add_argument('--content',required=True);_ca(p,'writer')
+ p=s.add_parser('document-search');p.add_argument('--query',required=True);p.add_argument('--namespace');p.add_argument('--limit',type=int,default=5);_ca(p)
+ p=s.add_parser('budget-set');p.add_argument('--limit-usd',type=float,required=True);_ca(p,'admin')
+ p=s.add_parser('budget-status');_ca(p)
+ p=s.add_parser('serve');p.add_argument('--host',default='127.0.0.1');p.add_argument('--port',type=int,default=8080)
+ return x
+def main():
+ a=build_parser().parse_args()
+ if a.command=='evolve':
+  r=evolve(provider=_provider(a.provider,a.model),benchmark_path=a.benchmark,holdout_path=a.holdout,db_path=a.db,state_path=a.state,history_path=a.history,max_mutation_rounds=a.max_rounds,canary_policy=CanaryPolicy(traffic_fraction=a.canary_traffic));Path(a.json_report).parent.mkdir(parents=True,exist_ok=True);Path(a.json_report).write_text(json.dumps(r.to_dict(),indent=2)+'\n');print(r.selected_champion);return 0
+ if a.command=='status':print(json.dumps(read_status(a.state,a.history),indent=2));return 0
+ if a.command=='serve':
+  import uvicorn;uvicorn.run('prime_genesis.control_api:app',host=a.host,port=a.port);return 0
+ rt=PrimeRuntime(a.runtime_db)
+ try:
+  if a.command=='products':print(json.dumps(rt.list_products(),indent=2))
+  elif a.command=='models':print(json.dumps(rt.list_models(),indent=2))
+  elif a.command=='run-product':print(json.dumps(rt.run_product(a.product,_ctx(a),ProductRequest(a.text,a.sensitivity,a.namespace,a.max_cost_usd,a.latency_target_ms)).to_dict(),indent=2))
+  elif a.command=='memory-add':print(json.dumps(rt.ingest_memory(_ctx(a),namespace=a.namespace,content=a.content).__dict__,indent=2))
+  elif a.command=='memory-search':print(json.dumps([r.__dict__ for r in rt.search_memory(_ctx(a),query=a.query,namespace=a.namespace,limit=a.limit)],indent=2))
+  elif a.command=='document-add':print(json.dumps(rt.ingest_document(_ctx(a),namespace=a.namespace,title=a.title,content=a.content).__dict__,indent=2))
+  elif a.command=='document-search':print(json.dumps([{'document':h.document.__dict__,'score':h.score,'matched_terms':h.matched_terms} for h in rt.search_documents(_ctx(a),query=a.query,namespace=a.namespace,limit=a.limit)],indent=2))
+  elif a.command=='budget-set':rt.budgets.set_daily_limit(_ctx(a),a.limit_usd);print(json.dumps(rt.budgets.authorize(_ctx(a),0).__dict__,indent=2))
+  elif a.command=='budget-status':print(json.dumps(rt.budgets.authorize(_ctx(a),0).__dict__,indent=2))
+  return 0
+ finally:rt.close()
+if __name__=='__main__':raise SystemExit(main())
