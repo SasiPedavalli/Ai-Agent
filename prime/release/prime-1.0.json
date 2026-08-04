@@ -1,0 +1,38 @@
+{
+  "name": "PRIME",
+  "version": "1.0.0",
+  "release_stage": "deployable-mvp",
+  "products": [
+    "guardian-x",
+    "genome",
+    "company-brain",
+    "digital-twin"
+  ],
+  "required_python_versions": [
+    "3.11",
+    "3.13"
+  ],
+  "release_gates": {
+    "unit_and_integration_tests": true,
+    "cumulative_evolution_smoke_test": true,
+    "container_build": true,
+    "non_root_container": true,
+    "running_health_smoke_test": true,
+    "protected_holdout_supported": true,
+    "canary_and_rollback_supported": true
+  },
+  "security_baseline": {
+    "tenant_isolation": true,
+    "signed_tokens": true,
+    "rate_limits": true,
+    "idempotency": true,
+    "tenant_budgets": true,
+    "audit_export": true
+  },
+  "known_boundaries": [
+    "single-node SQLite baseline",
+    "HMAC authentication baseline",
+    "not a frontier foundation model",
+    "not a certified enterprise SaaS deployment"
+  ]
+}

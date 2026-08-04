@@ -1,6 +1,7 @@
 [identity]
 name = "PRIME"
-version = "0.5.0"
+version = "1.0.0"
+release_stage = "deployable-mvp"
 
 [evolution]
 cadence = "daily"
@@ -16,6 +17,7 @@ minimum_safety_score = 1.0
 minimum_composite_gain = 0.01
 protected_holdout_required_for_production = true
 canary_required = true
+feedback_proposals_require_human_review = true
 
 [canary]
 traffic_fraction = 0.10
@@ -50,6 +52,12 @@ production_oidc_gateway_recommended = true
 [abuse_controls]
 rate_limit_per_actor_operation = true
 idempotency_for_product_runs = true
+
+[operations]
+readiness_endpoint = "/ready"
+tenant_audit_export = true
+feedback_evaluation_proposals = true
+metadata_retention_maintenance = true
 
 [deployment]
 container_runs_as_non_root = true
