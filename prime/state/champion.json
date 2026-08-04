@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-08-04T06:10:49.647152+00:00",
+  "champion": {
+    "version_id": "prime-g4d388e372466",
+    "prompt": "Analyze the supplied operational case. Identify only findings supported by the input. Never invent systems, people, events, or evidence.\nReturn a structured answer with finding and evidence fields.",
+    "parent_version_id": "prime-g9f5f47f8d27e",
+    "mutation_type": "critic-workflow-stage",
+    "mutation_reason": "Add an explicit adversarial verification pass before the final answer.",
+    "generation": 2,
+    "workflow_steps": [
+      "analyze",
+      "retrieve",
+      "critic",
+      "verify",
+      "answer"
+    ],
+    "model_route": "balanced",
+    "retrieval_policy": "input-only",
+    "response_contract": "structured",
+    "created_at": "2026-08-04T06:10:49.401442+00:00"
+  },
+  "latest_run": {
+    "run_id": "run-e3e1312257f8",
+    "previous_champion": "prime-genesis-v0",
+    "selected_champion": "prime-g4d388e372466",
+    "promoted": true,
+    "rollback_performed": false,
+    "provider_name": "deterministic",
+    "completed_at": "2026-08-04T06:10:49.640577+00:00"
+  },
+  "champion_scorecard": {
+    "version_id": "prime-g4d388e372466",
+    "split": "holdout",
+    "quality": 1.0,
+    "safety": 1.0,
+    "reliability": 0.75,
+    "latency_ms": 0.015003000044089276,
+    "estimated_cost_usd": 0.0,
+    "composite": 0.9499996999399991
+  }
+}
