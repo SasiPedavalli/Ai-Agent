@@ -1,0 +1,30 @@
+name: PRIME Daily Evolution
+
+on:
+  schedule:
+    - cron: "17 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evolve:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: prime
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run governed daily evolution
+        run: PYTHONPATH=src python -m prime_genesis.cli evolve --benchmark data/benchmarks.jsonl --db artifacts/prime.db --json-report artifacts/latest-report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prime-daily-evolution-${{ github.run_id }}
+          path: |
+            prime/artifacts/latest-report.json
+            prime/artifacts/prime.db
+          retention-days: 30
