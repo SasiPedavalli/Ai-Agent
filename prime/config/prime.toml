@@ -1,6 +1,6 @@
 [identity]
 name = "PRIME"
-version = "0.3.0"
+version = "0.4.0"
 
 [evolution]
 cadence = "daily"
@@ -30,3 +30,13 @@ api_triggered_evolution_default = false
 [memory]
 default_backend = "sqlite"
 customer_data_commit_to_git = false
+
+[models]
+registry_enabled = true
+failover_enabled = true
+budget_enforcement = true
+
+[retrieval]
+tenant_scoped = true
+default_limit = 5
+backend = "sqlite-token-overlap"
