@@ -4,23 +4,112 @@ on:
   schedule:
     - cron: "17 7 * * *"
   workflow_dispatch:
+    inputs:
+      provider:
+        description: "Provider override"
+        required: false
+        type: choice
+        options: [auto, mock, openai]
+        default: auto
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: prime-daily-evolution
+  cancel-in-progress: false
 
 jobs:
   evolve:
     runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      PRIME_HOLDOUT_JSONL_BASE64: ${{ secrets.PRIME_HOLDOUT_JSONL_BASE64 }}
+      PRIME_OPENAI_MODEL: ${{ vars.PRIME_OPENAI_MODEL }}
     defaults:
       run:
         working-directory: prime
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      - name: Select provider and install PRIME
+        id: provider
+        shell: bash
+        run: |
+          requested="${{ inputs.provider || 'auto' }}"
+          provider="mock"
+          if [[ "$requested" == "openai" ]]; then
+            if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+              echo "OPENAI_API_KEY is required for the openai provider" >&2
+              exit 1
+            fi
+            provider="openai"
+          elif [[ "$requested" == "mock" ]]; then
+            provider="mock"
+          elif [[ -n "${OPENAI_API_KEY:-}" ]]; then
+            provider="openai"
+          fi
+
+          if [[ "$provider" == "openai" ]]; then
+            python -m pip install -e '.[openai]'
+          else
+            python -m pip install -e .
+          fi
+          echo "provider=$provider" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare protected holdout
+        id: holdout
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          if [[ -n "${PRIME_HOLDOUT_JSONL_BASE64:-}" ]]; then
+            printf '%s' "$PRIME_HOLDOUT_JSONL_BASE64" | base64 --decode > artifacts/protected-holdout.jsonl
+            echo "path=artifacts/protected-holdout.jsonl" >> "$GITHUB_OUTPUT"
+            echo "mode=protected-secret" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=data/holdout.calibration.jsonl" >> "$GITHUB_OUTPUT"
+            echo "mode=public-calibration" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run tests before evolution
+        run: python -m unittest discover -s tests -v
+
       - name: Run governed daily evolution
-        run: PYTHONPATH=src python -m prime_genesis.cli evolve --benchmark data/benchmarks.jsonl --db artifacts/prime.db --json-report artifacts/latest-report.json
+        run: |
+          prime evolve \
+            --provider "${{ steps.provider.outputs.provider }}" \
+            --benchmark data/benchmarks.jsonl \
+            --holdout "${{ steps.holdout.outputs.path }}" \
+            --db artifacts/prime.db \
+            --state state/champion.json \
+            --history state/evolution-history.jsonl \
+            --json-report artifacts/latest-report.json \
+            --max-rounds 2 \
+            --canary-traffic 0.10
+
+      - name: Verify resulting state
+        run: prime status --state state/champion.json --history state/evolution-history.jsonl --json
+
+      - name: Commit non-sensitive evolution state
+        shell: bash
+        working-directory: .
+        run: |
+          git config user.name "prime-evolution-bot"
+          git config user.email "prime-evolution-bot@users.noreply.github.com"
+          git add prime/state/champion.json prime/state/evolution-history.jsonl
+          if git diff --cached --quiet; then
+            echo "No governed state change to commit."
+          else
+            git commit -m "chore(prime): record governed daily evolution"
+            git pull --rebase origin main
+            git push
+          fi
+
       - uses: actions/upload-artifact@v4
         with:
           name: prime-daily-evolution-${{ github.run_id }}
