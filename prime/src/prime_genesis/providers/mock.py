@@ -13,12 +13,13 @@ class DeterministicProvider(AgentProvider):
         source = case.input_text.lower()
         findings = [term for term in case.expected_terms if term.lower() in source]
         prompt = version.prompt.lower()
+        normalized_input = re.sub(r"\s+", " ", case.input_text).strip()
 
         if "evidence-linked" in prompt:
             return (
                 f"finding={'; '.join(findings)} | "
                 f"confidence={min(0.99, 0.55 + 0.12 * len(findings)):.2f} | "
-                f"evidence={re.sub(r'\s+', ' ', case.input_text).strip()}"
+                f"evidence={normalized_input}"
             )
         if "structured" in prompt:
             return f"finding={'; '.join(findings)} | evidence=available"
