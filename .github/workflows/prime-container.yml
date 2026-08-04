@@ -1,4 +1,5 @@
 name: PRIME Container
+
 on:
   pull_request:
     paths:
@@ -9,10 +10,12 @@ on:
     paths:
       - "prime/**"
       - ".github/workflows/prime-container.yml"
+
 permissions:
   contents: read
+
 jobs:
-  build:
+  build-and-smoke:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,3 +23,26 @@ jobs:
         run: docker build --file prime/Dockerfile --tag prime:${{ github.sha }} prime
       - name: Inspect non-root user
         run: docker run --rm --entrypoint sh prime:${{ github.sha }} -c 'test "$(id -u)" != "0"'
+      - name: Start PRIME
+        run: |
+          docker run --detach --name prime-smoke \
+            --publish 8080:8080 \
+            --env PRIME_AUTH_MODE=hmac \
+            --env PRIME_AUTH_SECRET=ci-only-secret-with-at-least-32-characters \
+            prime:${{ github.sha }}
+      - name: Verify health and readiness
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8080/health >/tmp/prime-health.json && \
+               curl --fail --silent http://127.0.0.1:8080/ready >/tmp/prime-ready.json; then
+              cat /tmp/prime-health.json
+              cat /tmp/prime-ready.json
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs prime-smoke
+          exit 1
+      - name: Stop PRIME
+        if: always()
+        run: docker rm --force prime-smoke || true
