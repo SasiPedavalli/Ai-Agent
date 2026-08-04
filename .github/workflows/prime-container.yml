@@ -18,7 +18,7 @@ jobs:
   build-and-smoke:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build PRIME container
         run: docker build --file prime/Dockerfile --tag prime:${{ github.sha }} prime
       - name: Inspect non-root user
