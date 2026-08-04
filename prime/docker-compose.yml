@@ -1,0 +1,15 @@
+services:
+  prime:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      PRIME_AUTH_MODE: hmac
+      PRIME_AUTH_SECRET: ${PRIME_AUTH_SECRET:?set PRIME_AUTH_SECRET}
+      PRIME_RATE_LIMIT_PER_MINUTE: ${PRIME_RATE_LIMIT_PER_MINUTE:-60}
+      PRIME_API_EVOLUTION_ENABLED: "false"
+    volumes:
+      - prime_data:/data
+    restart: unless-stopped
+volumes:
+  prime_data:
