@@ -1,3 +1,3 @@
-"""PRIME Genesis evolution control plane."""
+"""PRIME governed evolution control plane."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

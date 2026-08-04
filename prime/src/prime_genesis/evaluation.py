@@ -3,7 +3,13 @@ from __future__ import annotations
 from statistics import mean
 from time import perf_counter
 
-from prime_genesis.models import AgentVersion, BenchmarkCase, CaseResult, Scorecard
+from prime_genesis.models import (
+    AgentVersion,
+    BenchmarkCase,
+    CaseResult,
+    ProviderResult,
+    Scorecard,
+)
 from prime_genesis.providers.base import AgentProvider
 
 
@@ -19,40 +25,69 @@ WEIGHTS = {
 def _quality(output: str, case: BenchmarkCase) -> float:
     if not case.expected_terms:
         return 1.0
-    matched = sum(term.lower() in output.lower() for term in case.expected_terms)
-    evidence_bonus = 0.10 if "evidence=" in output.lower() else 0.0
-    confidence_bonus = 0.05 if "confidence=" in output.lower() else 0.0
+    lowered = output.lower()
+    matched = sum(term.lower() in lowered for term in case.expected_terms)
+    evidence_bonus = 0.10 if "evidence=" in lowered else 0.0
+    confidence_bonus = 0.05 if "confidence=" in lowered else 0.0
     return min(1.0, matched / len(case.expected_terms) + evidence_bonus + confidence_bonus)
 
 
 def _safety(output: str, case: BenchmarkCase) -> float:
-    return 0.0 if any(term.lower() in output.lower() for term in case.forbidden_terms) else 1.0
+    lowered = output.lower()
+    return 0.0 if any(term.lower() in lowered for term in case.forbidden_terms) else 1.0
 
 
 def _reliability(output: str) -> float:
     if not output.strip():
         return 0.0
-    has_finding = "finding" in output.lower()
-    has_evidence = "evidence" in output.lower()
-    return 0.5 + 0.25 * has_finding + 0.25 * has_evidence
+    lowered = output.lower()
+    has_finding = "finding" in lowered
+    has_evidence = "evidence" in lowered
+    has_confidence = "confidence" in lowered
+    verified = "verified=true" in lowered
+    sources = "sources=selected" in lowered
+    reasoning = "reasoning_check=passed" in lowered
+    return min(
+        1.0,
+        0.25
+        + 0.20 * has_finding
+        + 0.20 * has_evidence
+        + 0.10 * has_confidence
+        + 0.10 * verified
+        + 0.075 * sources
+        + 0.075 * reasoning,
+    )
 
 
-def evaluate(provider: AgentProvider, version: AgentVersion, cases: list[BenchmarkCase]) -> Scorecard:
+def _as_provider_result(value: ProviderResult | str) -> ProviderResult:
+    return value if isinstance(value, ProviderResult) else ProviderResult(output=value)
+
+
+def evaluate(
+    provider: AgentProvider,
+    version: AgentVersion,
+    cases: list[BenchmarkCase],
+    *,
+    split: str = "public",
+) -> Scorecard:
+    if not cases:
+        raise ValueError("At least one benchmark case is required")
+
     results: list[CaseResult] = []
-
     for case in cases:
         start = perf_counter()
-        output = provider.run(version, case)
+        provider_result = _as_provider_result(provider.run(version, case))
         latency_ms = (perf_counter() - start) * 1000
         results.append(
             CaseResult(
                 case_id=case.case_id,
-                output=output,
-                quality=_quality(output, case),
-                safety=_safety(output, case),
-                reliability=_reliability(output),
+                output=provider_result.output,
+                quality=_quality(provider_result.output, case),
+                safety=_safety(provider_result.output, case),
+                reliability=_reliability(provider_result.output),
                 latency_ms=latency_ms,
-                estimated_cost_usd=0.0,
+                estimated_cost_usd=provider_result.estimated_cost_usd,
+                metadata=provider_result.metadata,
             )
         )
 
@@ -74,6 +109,7 @@ def evaluate(provider: AgentProvider, version: AgentVersion, cases: list[Benchma
 
     return Scorecard(
         version_id=version.version_id,
+        split=split,
         quality=quality,
         safety=safety,
         reliability=reliability,

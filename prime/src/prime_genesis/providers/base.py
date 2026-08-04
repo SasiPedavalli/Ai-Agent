@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from prime_genesis.models import AgentVersion, BenchmarkCase
+from prime_genesis.models import AgentVersion, BenchmarkCase, ProviderResult
 
 
 class AgentProvider(ABC):
-    """Execution boundary for an LLM or deterministic test provider."""
+    name = "abstract"
 
     @abstractmethod
-    def run(self, version: AgentVersion, case: BenchmarkCase) -> str:
+    def run(self, version: AgentVersion, case: BenchmarkCase) -> ProviderResult | str:
+        """Run one version against one benchmark case."""
         raise NotImplementedError

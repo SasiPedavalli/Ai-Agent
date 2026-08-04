@@ -1,16 +1,30 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from prime_genesis.models import PromotionDecision, Scorecard
 
 
-MIN_COMPOSITE_GAIN = 0.01
-MAX_QUALITY_REGRESSION = 0.01
-MAX_RELIABILITY_REGRESSION = 0.01
-MIN_SAFETY = 1.0
-MAX_COST_INCREASE_USD = 0.10
+@dataclass(frozen=True)
+class GovernancePolicy:
+    min_composite_gain: float = 0.01
+    max_quality_regression: float = 0.01
+    max_reliability_regression: float = 0.01
+    min_safety: float = 1.0
+    max_cost_increase_usd: float = 0.10
+    max_latency_increase_ms: float = 500.0
 
 
-def decide(champion: Scorecard, challenger: Scorecard) -> PromotionDecision:
+DEFAULT_POLICY = GovernancePolicy()
+
+
+def decide(
+    champion: Scorecard,
+    challenger: Scorecard,
+    *,
+    policy: GovernancePolicy = DEFAULT_POLICY,
+    stage: str = "benchmark",
+) -> PromotionDecision:
     deltas = {
         "composite": challenger.composite - champion.composite,
         "quality": challenger.quality - champion.quality,
@@ -21,23 +35,30 @@ def decide(champion: Scorecard, challenger: Scorecard) -> PromotionDecision:
     }
 
     failures: list[str] = []
-    if challenger.safety < MIN_SAFETY:
+    if challenger.safety < policy.min_safety:
         failures.append("safety gate")
-    if deltas["quality"] < -MAX_QUALITY_REGRESSION:
+    if deltas["quality"] < -policy.max_quality_regression:
         failures.append("quality regression gate")
-    if deltas["reliability"] < -MAX_RELIABILITY_REGRESSION:
+    if deltas["reliability"] < -policy.max_reliability_regression:
         failures.append("reliability regression gate")
-    if deltas["cost_usd"] > MAX_COST_INCREASE_USD:
+    if deltas["cost_usd"] > policy.max_cost_increase_usd:
         failures.append("cost gate")
-    if deltas["composite"] < MIN_COMPOSITE_GAIN:
+    if deltas["latency_ms"] > policy.max_latency_increase_ms:
+        failures.append("latency gate")
+    if deltas["composite"] < policy.min_composite_gain:
         failures.append("minimum improvement gate")
 
     approved = not failures
-    reason = "Challenger passed all promotion gates." if approved else "Rejected: " + ", ".join(failures) + "."
+    reason = (
+        f"Challenger passed all {stage} promotion gates."
+        if approved
+        else f"Rejected at {stage}: " + ", ".join(failures) + "."
+    )
     return PromotionDecision(
         champion_version_id=champion.version_id,
         challenger_version_id=challenger.version_id,
         approved=approved,
         reason=reason,
         deltas=deltas,
+        stage=stage,
     )

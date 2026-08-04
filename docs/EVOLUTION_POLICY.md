@@ -1,26 +1,27 @@
 # PRIME Evolution Policy
 
-## Non-negotiable rules
+## Non-negotiable controls
 
-1. No uncontrolled production self-modification.
-2. Every mutation has a parent, reason, version, and evaluation record.
-3. Evaluation data is separated from mutation generation.
-4. A candidate cannot pass by improving one metric while violating a safety gate.
-5. Every promotion is reversible.
-6. High-impact actions require human approval.
-7. Customer-specific data remains isolated by tenant and deployment policy.
-8. Cost budgets and resource ceilings are enforced.
-9. Regressions trigger rollback or automatic demotion.
-10. Daily evolution produces evidence, not guaranteed improvement.
+1. PRIME does not rewrite arbitrary production code.
+2. Every version has a parent, generation, reason, and immutable identifier.
+3. Mutation generation cannot read the protected holdout.
+4. A challenger must pass public benchmarks, protected holdout gates, and canary checks.
+5. Safety cannot be traded for quality, latency, or cost.
+6. A failed canary requires rollback to the previous champion.
+7. Only aggregate, non-sensitive state may be committed to Git.
+8. Private cases, customer inputs, and raw outputs remain isolated artifacts.
+9. Real-model calls use explicit credentials and `store=False` where supported.
+10. High-impact customer actions require human approval.
+11. Daily evolution attempts improvement; it never guarantees that a better candidate exists.
+12. A no-promotion run is a valid safety outcome.
 
-## Daily cadence
+## Daily operating cycle
 
-- Collect observations and failures
-- Refresh non-protected training examples
-- Diagnose weak capability clusters
-- Generate bounded candidates
-- Execute sandbox evaluations
-- Compare against champion
-- Promote only passing challengers
-- Persist lineage and scorecards
-- Monitor promoted versions
+- Load the persisted champion.
+- Generate bounded configuration challengers.
+- Evaluate the active champion and challengers on public cases.
+- Evaluate public-gate winners on a separately supplied holdout.
+- Run canary checks for holdout-gate winners.
+- Promote the strongest fully passing challenger.
+- Preserve or roll back to the existing champion on failure.
+- Persist aggregate state and upload full evidence privately.
