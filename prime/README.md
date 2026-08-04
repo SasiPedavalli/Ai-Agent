@@ -1,73 +1,62 @@
-# PRIME v0.2 — Governed Continuous Evolution
+# PRIME v0.3 — Governed Evolution + Product Runtime
 
-**PRIME — Progressive Recursive Intelligence & Mutation Engine** is the control plane for a family of intelligent products: Guardian X, Genome, Company Brain, and Digital Twin.
+**PRIME — Progressive Recursive Intelligence & Mutation Engine** is a model-agnostic control plane that improves bounded AI policy through governed experiments and powers four tenant-scoped products:
 
-v0.2 turns the Genesis experiment into a cumulative daily evolution system. Each run resumes from the persisted champion, creates bounded configuration challengers, evaluates them on public benchmarks and a separate holdout, simulates a canary rollout, and either promotes the best safe candidate or preserves the current champion.
+- **Guardian X** — reliability, security, data, AI, and cost intelligence
+- **Genome** — longitudinal finance and healthcare risk-support signatures
+- **Company Brain** — organizational memory and conflict detection
+- **Digital Twin** — assumption-explicit counterfactual scenarios
 
-## Evolution path
+v0.3 combines cumulative daily evolution with tenant isolation, memory, model routing, bounded tools, runtime events, feedback, CLI commands, REST APIs, and a control dashboard. It is an executable platform foundation, not yet a frontier foundation model.
 
-```text
-Persisted champion
-    ↓
-Bounded prompt / workflow / retrieval / routing mutations
-    ↓
-Public benchmark gate
-    ↓
-Protected holdout gate
-    ↓
-Canary simulation
-    ↓
-Promote or roll back
-    ↓
-Persist champion + report + Git history
-```
-
-## Capabilities
-
-- Cumulative champion state across daily runs
-- Immutable version lineage and generation numbers
-- Prompt, workflow-policy, retrieval-policy, response-contract, and model-route mutations
-- Public benchmark and separate holdout evaluation
-- Multi-objective quality, safety, reliability, latency, and cost gates
-- Canary promotion and rollback records
-- SQLite experiment evidence plus Git-versioned non-sensitive state
-- Optional OpenAI Responses API provider with `store=False`
-- Optional FastAPI control plane and built-in dashboard
-- CLI commands for evolution, status, and serving the control center
-- Daily GitHub Actions evolution with optional secret-injected protected holdout
-
-## Local use
+## Run locally
 
 ```bash
 cd prime
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -e .
+python -m unittest discover -s tests -v
 prime evolve
 prime status
+prime products
 ```
 
-Real-model mode is optional:
+Run a product:
+
+```bash
+prime run-product guardian-x \
+  --tenant acme --actor operator --roles reader \
+  --text "Kafka consumer lag caused pipeline latency to breach the SLA." --json
+```
+
+Add Company Brain memory:
+
+```bash
+prime memory-add --tenant acme --actor editor --roles writer \
+  --namespace architecture --content "The deployment runbook lists port 8080."
+```
+
+Optional integrations:
 
 ```bash
 pip install -e '.[openai]'
 export OPENAI_API_KEY='...'
 prime evolve --provider openai --model gpt-5
-```
 
-Control center:
-
-```bash
 pip install -e '.[api]'
 prime serve --host 127.0.0.1 --port 8080
 ```
 
-API-triggered evolution is disabled by default. Explicitly set `PRIME_API_EVOLUTION_ENABLED=true` only in a controlled environment.
+The product API expects `X-Prime-Tenant`, `X-Prime-Actor`, and `X-Prime-Roles` from a trusted identity-aware gateway. PRIME v0.3 does not authenticate those headers itself. API-triggered evolution remains disabled unless `PRIME_API_EVOLUTION_ENABLED=true` is set explicitly.
 
-## Protected evaluations
+## Safety boundaries
 
-`data/holdout.calibration.jsonl` is public and is therefore only a calibration set. Production promotion should inject a private JSONL holdout through the `PRIME_HOLDOUT_JSONL_BASE64` GitHub secret. Mutation generation never receives that protected file.
+- Customer content, runtime databases, private holdouts, and raw outputs are not committed to Git.
+- Genome does not diagnose patients or confirm fraud.
+- Guardian X does not execute automatic remediation.
+- Company Brain does not silently resolve policy conflicts.
+- Digital Twin does not claim guaranteed outcomes.
+- Arbitrary source-code self-modification remains prohibited; code changes use reviewed pull requests.
 
-## Safety boundary
-
-PRIME evolves configuration and decision policy, not arbitrary production code. Every promoted version must pass benchmark, holdout, and canary gates. High-impact actions remain human-approved.
+See `docs/ARCHITECTURE.md`, `docs/EVOLUTION_POLICY.md`, and `docs/PRODUCT_RUNTIME.md`.
