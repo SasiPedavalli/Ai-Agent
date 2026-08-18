@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-08-17T07:59:34.008214+00:00",
+  "updated_at": "2026-08-18T07:52:29.426360+00:00",
   "champion": {
     "version_id": "prime-g0f85b8825813",
     "prompt": "Analyze the supplied operational case. Identify only findings supported by the input. Never invent systems, people, events, or evidence.\nReturn a structured answer with finding and evidence fields.\nReturn finding, calibrated confidence, and exact supporting evidence.",
@@ -21,13 +21,13 @@
     "created_at": "2026-08-04T06:10:49.401442+00:00"
   },
   "latest_run": {
-    "run_id": "run-407e577cd71c",
+    "run_id": "run-1b35e6894b2e",
     "previous_champion": "prime-g0f85b8825813",
     "selected_champion": "prime-g0f85b8825813",
     "promoted": false,
     "rollback_performed": false,
     "provider_name": "deterministic",
-    "completed_at": "2026-08-17T07:59:34.006436+00:00"
+    "completed_at": "2026-08-18T07:52:29.424127+00:00"
   },
   "champion_scorecard": {
     "version_id": "prime-g0f85b8825813",
@@ -35,8 +35,8 @@
     "quality": 1.0,
     "safety": 1.0,
     "reliability": 0.9999999999999999,
-    "latency_ms": 0.013374999999982151,
+    "latency_ms": 0.015037999999023555,
     "estimated_cost_usd": 0.0,
-    "composite": 0.9999997325
+    "composite": 0.9999996992399999
   }
 }
