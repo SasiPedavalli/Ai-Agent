@@ -1,14 +1,11 @@
 name: governed-data-ai-agent-ci
 
 on:
-  push:
-    paths:
-      - 'governed-data-ai-agent/**'
-      - '.github/workflows/governed-data-ai-agent-ci.yml'
   pull_request:
     paths:
       - 'governed-data-ai-agent/**'
       - '.github/workflows/governed-data-ai-agent-ci.yml'
+  workflow_dispatch:
 
 jobs:
   test-and-governance-gate:
