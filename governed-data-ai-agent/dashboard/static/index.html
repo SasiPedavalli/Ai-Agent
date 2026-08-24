@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Governed Data & AI Operations Agent</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+  <main class="shell">
+    <header class="topbar">
+      <div><div class="eyebrow">DATA & AI GOVERNANCE CONTROL PLANE</div><h1>Governed Data & AI Operations Agent</h1><p class="subtitle">AI-assisted metadata enrichment with deterministic governance gates for trusted, auditable data products.</p></div>
+      <div class="status-cluster"><span class="chip chip-live"><i></i> Agent v1.0.0</span><span class="chip">Purview-ready</span><span class="chip">CI/CD Gate</span></div>
+    </header>
+    <section class="hero-grid">
+      <article class="panel control-panel">
+        <div class="panel-heading"><div><span class="section-kicker">01 / INPUT</span><h2>Governed asset intake</h2></div><button id="sampleBtn" class="button button-ghost">Load sample</button></div>
+        <label id="dropZone" class="drop-zone"><input id="fileInput" type="file" accept=".csv,text/csv" /><span class="drop-icon">⇧</span><strong id="fileName">Drop a CSV here</strong><span>or click to choose a dataset · max 2 MB</span></label>
+        <div class="form-grid"><label>Asset name<input id="assetName" value="customer_events" /></label><label>Owner<input id="owner" value="data-platform@company.com" /></label><label>Domain<input id="domain" value="customer-telemetry" /></label><label>Environment<select id="environment"><option>dev</option><option selected>test</option><option>prod</option></select></label></div>
+        <div class="toggle-row"><label class="toggle"><input id="approved" type="checkbox" checked /><span></span><b>Approved governed source</b></label><label class="toggle"><input id="lineage" type="checkbox" checked /><span></span><b>Lineage registered</b></label></div>
+        <button id="runBtn" class="button button-primary">Run governance agent <span>→</span></button><div id="errorBox" class="error-box hidden"></div>
+      </article>
+      <article class="panel decision-panel"><span class="section-kicker">02 / DECISION</span><div id="decisionBadge" class="decision-badge decision-idle">READY</div><h2 id="decisionTitle">Awaiting governance run</h2><p id="decisionCopy">Upload a dataset and the agent will evaluate metadata, data quality, anomalies, policy controls, and production readiness.</p><div class="decision-stats"><div><span>Quality</span><strong id="qualityMetric">—</strong></div><div><span>Policy checks</span><strong id="policyMetric">—</strong></div><div><span>Classified fields</span><strong id="classMetric">—</strong></div><div><span>Anomalies</span><strong id="anomalyMetric">—</strong></div></div></article>
+    </section>
+    <section class="panel pipeline-panel"><div class="panel-heading"><div><span class="section-kicker">03 / AGENT WORKFLOW</span><h2>Governance execution path</h2></div><span id="runtimeLabel" class="muted">No run yet</span></div><div id="pipeline" class="pipeline"><div class="stage" data-stage="source"><span>1</span><b>Approved source</b><small>governed-source check</small></div><i></i><div class="stage" data-stage="metadata"><span>2</span><b>Metadata</b><small>AI enrichment</small></div><i></i><div class="stage" data-stage="quality"><span>3</span><b>Data quality</b><small>rule validation</small></div><i></i><div class="stage" data-stage="anomaly"><span>4</span><b>Anomalies</b><small>numeric detection</small></div><i></i><div class="stage" data-stage="policy"><span>5</span><b>Policy gate</b><small>ALLOW / BLOCK</small></div><i></i><div class="stage" data-stage="audit"><span>6</span><b>Audit</b><small>trace + Purview boundary</small></div></div></section>
+    <section id="results" class="results-grid hidden">
+      <article class="panel span-2"><div class="panel-heading"><div><span class="section-kicker">04 / POLICY AS CODE</span><h2>Governance controls</h2></div><span id="policySummary" class="chip"></span></div><div id="policyChecks" class="check-grid"></div></article>
+      <article class="panel"><span class="section-kicker">05 / METADATA</span><h2>Classifications</h2><p id="sensitivity" class="muted"></p><div id="classifications" class="classification-list"></div></article>
+      <article class="panel"><span class="section-kicker">06 / QUALITY</span><h2>Data quality findings</h2><div id="qualityFindings" class="finding-list"></div></article>
+      <article class="panel"><span class="section-kicker">07 / ANOMALY DETECTION</span><h2>Detected anomalies</h2><div id="anomalies" class="finding-list"></div></article>
+      <article class="panel span-2 trace-panel"><div><span class="section-kicker">08 / AUDITABILITY</span><h2>Input / output traceability</h2></div><div class="trace-grid"><div><span>Run ID</span><code id="runId">—</code></div><div><span>Agent version</span><code id="agentVersion">—</code></div><div><span>Environment</span><code id="traceEnvironment">—</code></div><div><span>Created</span><code id="createdAt">—</code></div><div class="wide"><span>Input SHA-256</span><code id="inputHash">—</code></div><div class="wide"><span>Output SHA-256</span><code id="outputHash">—</code></div></div></article>
+      <article class="panel span-2"><span class="section-kicker">09 / NEXT ACTION</span><h2>Agent recommendations</h2><div id="recommendations" class="recommendations"></div></article>
+    </section>
+    <footer><span>Python · FastAPI · PySpark/Databricks-ready · Microsoft Purview boundary · Azure DevOps · Terraform · Bicep</span><span>Governance decisions remain deterministic and auditable.</span></footer>
+  </main>
+  <script src="/static/app.js"></script>
+</body></html>
