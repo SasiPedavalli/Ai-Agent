@@ -1,0 +1,5 @@
+# Core demo uses only the Python standard library.
+# Optional production integrations:
+# pyspark>=3.5
+# openai>=1.0
+# azure-identity>=1.17

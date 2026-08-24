@@ -1,0 +1,10 @@
+{
+  "required_columns": ["event_id", "customer_id", "email", "event_type", "amount"],
+  "unique_key": "event_id",
+  "max_null_rate": 0.10,
+  "allowed_values": {
+    "event_type": ["alarm", "heartbeat", "maintenance"]
+  },
+  "numeric_columns": ["amount"],
+  "z_threshold": 2.2
+}

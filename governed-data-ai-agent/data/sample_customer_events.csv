@@ -1,0 +1,11 @@
+event_id,customer_id,email,event_type,amount
+E001,C1001,ana@example.com,alarm,45
+E002,C1002,bob@example.com,heartbeat,42
+E003,C1003,cam@example.com,alarm,46
+E004,C1004,dia@example.com,maintenance,44
+E005,C1005,eli@example.com,alarm,43
+E006,C1006,fox@example.com,heartbeat,47
+E007,C1007,gus@example.com,alarm,46
+E008,C1008,hal@example.com,alarm,45
+E009,C1009,ivy@example.com,maintenance,44
+E010,C1010,jay@example.com,alarm,120

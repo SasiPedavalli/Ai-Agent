@@ -1,0 +1,35 @@
+name: governed-data-ai-agent-ci
+
+on:
+  pull_request:
+    paths:
+      - 'governed-data-ai-agent/**'
+      - '.github/workflows/governed-data-ai-agent-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  test-and-governance-gate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: governed-data-ai-agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Governance policy gate
+        run: |
+          python -m app.main \
+            --approved \
+            --lineage-registered \
+            --environment test \
+            --promotion-gate \
+            --output governance-gate-result.json
+      - name: Upload governance audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: governance-audit
+          path: governed-data-ai-agent/governance-gate-result.json

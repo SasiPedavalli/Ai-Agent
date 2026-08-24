@@ -1,0 +1,7 @@
+{
+  "min_quality_score": 90,
+  "max_anomalies": 1,
+  "require_owner": true,
+  "require_lineage": true,
+  "block_unapproved_sources": true
+}
