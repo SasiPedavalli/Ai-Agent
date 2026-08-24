@@ -18,7 +18,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Unit tests
+      - name: Install dashboard runtime
+        run: pip install -r requirements-dashboard.txt
+      - name: Unit and dashboard API tests
         run: python -m unittest discover -s tests -v
       - name: Governance policy gate
         run: |
