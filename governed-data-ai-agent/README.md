@@ -81,6 +81,3 @@ The demo uses `MockPurviewGateway` because a real Microsoft Purview tenant requi
 
 `app/metadata.py` provides a safe metadata-enrichment boundary. A production Azure OpenAI implementation should return structured metadata suggestions, but **Microsoft Purview/RBAC/policy checks must remain deterministic and external to the model**.
 
-## Interview demo story
-
-> I built a Governed Data & AI Operations Agent because I wanted the AI layer to automate platform work without becoming a governance bypass. The agent only operates on approved, governed data sources. It performs metadata enrichment, data quality checks and anomaly detection, then runs deterministic governance and policy checks. Every execution records a run ID, agent version, input hash, output hash and policy decision for logging, auditability and input/output traceability. I also wired the agent into a CI/CD promotion gate so a data or AI asset cannot move from test to prod when governance requirements fail. The architecture is designed to plug into Microsoft Purview, Azure Databricks/PySpark, Azure OpenAI, Azure DevOps, Terraform and Bicep.
